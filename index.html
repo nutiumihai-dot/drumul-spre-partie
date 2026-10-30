@@ -396,6 +396,7 @@ const AVAIL = [
   ['sala', 'Disponibil la sală', 'Sesiune pentru sală.'],
   ['afara', 'Drumeție', 'Zi de drumeție sau ieșire lungă afară; fără picioare în ziua dinainte.'],
   ['inot', 'Bazin / înot', 'Mergi la bazin; ajustez antrenamentul din ziua respectivă și din jur.'],
+  ['clasa', 'Clasă programată', 'Participi la o clasă (functional, spinning, yoga…); e antrenamentul zilei.'],
   ['calatorie', 'Excursie / călătorie', 'Plecat: sesiune scurtă doar cu ce iei cu tine.'],
   ['indisponibil', 'Indisponibil', 'Nu pun nimic; mut sesiunea în altă zi.'],
   ['kineto', 'Kineto', 'Fără forță, cel mult mobilitate ușoară.']
@@ -404,7 +405,7 @@ const KINDS = [...AVAIL.map(([k, l]) => [k, l]), ['odihna', 'Odihnă']];
 const GEAR = [['trx', 'TRX'], ['benzi', 'Benzi elastice'], ['mini', 'Banda gri'], ['corzi', 'Corzi elastice'], ['saculeti', 'Săculeți']];
 const gearNames = g => (g || []).map(x => GEAR.find(y => y[0] === x)?.[1] || x).join(', ');
 function availLabel(day) {
-  const base = KINDS.find(k => k[0] === (day?.kind || ''))?.[1] || 'Normal';
+  const base = day?.kind === 'clasa' && day.classInfo?.name ? `Clasă: ${day.classInfo.name}${day.classInfo.time ? ' ' + day.classInfo.time : ''}` : KINDS.find(k => k[0] === (day?.kind || ''))?.[1] || 'Normal';
   return base + (day?.gear?.length ? ` · ${gearNames(day.gear)}` : '');
 }
 function availHTML(d) {
@@ -428,6 +429,7 @@ function availSheet(date) {
       <div class="grid2">
         <label class="f">Până la (inclusiv)<input type="date" id="av-until" value="${date}" min="${date}"></label>
         <label class="f">Detalii<input type="text" id="av-note" value="${esc(day.availNote || '')}" placeholder="ex. hotel cu sală, plec seara"></label>
+        ${kind === 'clasa' ? `<label class="f">Ce clasă<input type="text" id="av-class" value="${esc(day.classInfo?.name || '')}" placeholder="ex. functional, spinning, yoga"></label><label class="f">Ora<input type="time" id="av-time" value="${esc(day.classInfo?.time || '')}"></label>` : ''}
       </div>
       <div class="row"><button class="btn primary" id="av-save">Notează</button><button class="btn ghost" data-act="close">Renunță</button></div>`;
     $$('[data-k]', p).forEach(b => b.onclick = () => {
@@ -441,7 +443,8 @@ function availSheet(date) {
       const note = $('#av-note').value.trim();
       const needs = kind === 'calatorie' || kind === 'afara';
       let d = date, n = 0;
-      while (d <= until && n < 31) { saveDay(d, { kind, gear: needs ? gear : null, availNote: note || null }); d = addDays(d, 1); n++; }
+      const classInfo = kind === 'clasa' ? { name: ($('#av-class')?.value || '').trim(), time: $('#av-time')?.value || '' } : null;
+      while (d <= until && n < 31) { saveDay(d, { kind, gear: needs ? gear : null, availNote: note || null, classInfo }); d = addDays(d, 1); n++; }
       closeSheet(); ensureRange(date, until);
       toast(n > 1 ? `Notat pentru ${n} zile. Trimiți cu butonul de jos.` : 'Notat. Trimiți cu butonul de jos.');
     };
@@ -521,6 +524,7 @@ const LABELS = {
   kind: 'Disponibilitate', availNote: 'Detalii disponibilitate', weight: 'Greutate dimineața', steps: 'Pași', sleepHours: 'Somn azi-noapte (ore)', wake: 'Trezire (1–5)', party: 'Party seara',
   'log.completed': 'Antrenament', 'log.skipReason': 'Motiv', 'log.rpe': 'Efort (RPE)', 'log.painDuring': 'Durere în timpul antrenamentului',
   'log.painEvening': 'Durere seara', 'log.painMorning': 'Durere a doua zi dimineață', 'log.stiffness': 'Rigiditate', 'log.energy': 'Energie',
+  doms: 'Febră musculară (0–10)', 'classInfo.name': 'Clasă', 'classInfo.time': 'Ora clasei', 'classLog.what': 'Clasa: ce ați făcut', 'classLog.minutes': 'Clasa: durată (min)', 'classLog.rpe': 'Clasa: RPE', 'classLog.knee': 'Clasa: genunchi', 'classLog.notes': 'Clasa: cum a fost', 'outdoor.rpe': 'Ieșire: RPE',
   'log.swelling': 'Umflare', 'log.feel': 'Cum s-a simțit (1–5)', 'log.feelNote': 'Cum a fost', 'log.kneeling': 'Disconfort la sprijin', 'log.notes': 'Notițe antrenament',
   'outdoor.type': 'Ieșire: tip', 'outdoor.minutes': 'Ieșire: durată (min)', 'outdoor.km': 'Ieșire: distanță (km)', 'outdoor.up': 'Ieșire: urcare (m)',
   'outdoor.down': 'Ieșire: coborâre (m)', 'outdoor.kneeDown': 'Ieșire: genunchi la coborâre', 'outdoor.notes': 'Ieșire: notițe', 'outdoor.photos': 'Ieșire: poze',
@@ -540,6 +544,7 @@ function describe(patch) {
   const walk = (o, pre) => Object.entries(o).forEach(([k, v]) => {
     const p = pre ? `${pre}.${k}` : k;
     if (p === 'date') return;
+    if (v == null && ['gear', 'classInfo', 'availNote'].includes(p)) return;
     if (p === 'events') { lines.push(['Ocazii', v.length ? v.map(eventLine).join(' · ') : 'toate șterse']); return; }
     if (p === 'cardio') { lines.push(['Cardio', v.length ? v.map(cardioLine).join(' · ') : 'tot șters']); return; }
     if (p === 'gear') { lines.push(['Echipament luat', v?.length ? gearNames(v) : 'nimic']); return; }
@@ -1010,6 +1015,7 @@ const CAMPS = [[1800, 'Tabăra 1'], [3600, 'Tabăra 2'], [5400, 'Tabăra 3'], [7
 function dayMeters(day) {
   if (!day) return 0;
   let m = ALT_RULES[day.log?.completed] || 0;
+  if (day.classLog?.minutes) m += ALT_RULES.complet;
   if (day.outdoor && (day.outdoor.minutes || day.outdoor.km)) m += ALT_RULES.outdoor;
   const cm = (day.cardio || []).reduce((a, c) => a + (c.minutes || 0), 0);
   m += Math.min(ALT_RULES.cardioMax, Math.floor(cm / 2) * ALT_RULES.cardioPer2Min);
@@ -1091,6 +1097,7 @@ function viewAzi() {
       <label class="f">Pași ieri, ${esc(fmtShort(yd))} (total)<input type="text" inputmode="numeric" data-path="steps" data-date="${yd}" data-type="num" value="${S.days[yd]?.steps ?? ''}" placeholder="din Google Fit"></label>
     </div>
     ${q('Cât de greu te-ai trezit azi', 'wake', day.wake ?? null, { min: 1, max: 5, hint: '1 = ușor · 5 = foarte greu' })}
+    ${q('Febră musculară azi (cât de „rupt” ești)', 'doms', day.doms ?? null, { hint: '0 = deloc · 10 = abia mă mișc' })}
   </section>
   <section class="card"><h2>Ziua</h2>
     <div class="sec"><span class="qlabel">Disponibilitate</span>${availHTML(d) || `<span class="muted small">${esc(availLabel(day))}</span>`}</div>
@@ -1113,12 +1120,13 @@ function viewAzi() {
     if (useFb && plan?.blocks?.length) h += `<button class="btn ghost" data-act="fallback">Înapoi la antrenamentul planificat</button>`;
     else if (!useFb && S.profile?.fallback && !day.log?.completed) h += `<button class="btn" data-act="fallback">${plan?.blocks?.length ? 'Nu am timp sau chef azi: varianta minimă (15–20 min)' : 'Fă varianta minimă (15–20 min)'}</button>`;
     if (day.kind === 'afara' || day.kind === 'inot' || plan?.code === 'AFARĂ' || plan?.code === 'ÎNOT' || day.outdoor) h += outdoorHTML(day);
+    if (day.kind === 'clasa' || plan?.code === 'CLASĂ' || day.classLog) h += classHTML(day);
     h += cardioHTML(day);
   }
   return h + '</div></div>';
 }
 
-const SESS = { A: 'var(--c-a)', B: 'var(--c-b)', C: 'var(--c-c)', D: 'var(--c-d)', 'AFARĂ': 'var(--c-out)', 'ÎNOT': 'var(--c-out)' };
+const SESS = { A: 'var(--c-a)', B: 'var(--c-b)', C: 'var(--c-c)', D: 'var(--c-d)', FB: 'var(--c-c)', CIR: 'var(--c-a)', REACT: 'var(--c-out)', 'AFARĂ': 'var(--c-out)', 'ÎNOT': 'var(--c-out)', 'CLASĂ': 'var(--c-d)' };
 function loggedSomething(day) { return !!day && (day.weight != null || day.steps != null || (day.meals || []).length || day.log?.completed || day.outdoor); }
 function streak() {
   let d = today(); if (!loggedSomething(S.days[d])) d = addDays(d, -1);
@@ -1210,12 +1218,12 @@ function doneHTML(day, session, isFb, d) {
     h += `<div class="sec"><span class="qlabel">Ce te-a oprit?</span><div class="chips">${SKIP.map(s => `<button class="chip" data-act="set" data-path="log.skipReason" data-val="${esc(s)}" data-str="1" aria-pressed="${l.skipReason === s}">${s}</button>`).join('')}</div></div>`;
   } else if (l.completed) {
     h += q('Genunchiul în timpul antrenamentului', 'log.painDuring', l.painDuring ?? null, { knee: true, hint: '0 = deloc' });
+    h += `<label class="f">Pe scurt, cum a fost<textarea data-path="log.notes" placeholder="ex. greu la final, umărul stâng ciudat, mi-a plăcut circuitul">${esc(l.notes || '')}</textarea></label>`;
     h += `<details class="more"><summary>Mai multe detalii (opțional)</summary><div class="sec">
       ${q('Efort perceput (RPE)', 'log.rpe', l.rpe ?? null, { min: 1, max: 10, hint: '10 = maxim' })}
       ${q('Genunchiul seara', 'log.painEvening', l.painEvening ?? null, { knee: true })}
       ${q('Energie', 'log.energy', l.energy ?? null, { min: 1, max: 5, hint: '1 = zero · 5 = plin' })}
       <label class="done-line"><input type="checkbox" data-path="log.swelling" data-type="bool" ${l.swelling ? 'checked' : ''}> Genunchiul s-a umflat</label>
-      <label class="f">Notițe<textarea data-path="log.notes" placeholder="orice merită știut">${esc(l.notes || '')}</textarea></label>
     </div></details>`;
   }
   return h + `</section>`;
@@ -1275,6 +1283,18 @@ function changesSheet(session) {
   draw();
 }
 
+function classHTML(day) {
+  const c = day.classLog || {}, info = day.classInfo || {};
+  return `<section class="card"><h2>Clasă${info.name ? ': ' + esc(info.name) : ''}</h2>${info.time ? `<span class="muted small">la ${esc(info.time)}</span>` : ''}
+    <div class="grid2">
+      <label class="f">Ce ați făcut<input type="text" data-path="classLog.what" value="${esc(c.what || '')}" placeholder="ex. circuit cu kettlebell, sărituri, core"></label>
+      <label class="f">Durată (min)<input type="text" inputmode="numeric" data-path="classLog.minutes" data-type="num" value="${c.minutes ?? ''}"></label>
+    </div>
+    ${q('Cât de greu a fost (RPE)', 'classLog.rpe', c.rpe ?? null, { min: 1, max: 10, hint: '10 = maxim' })}
+    ${q('Genunchiul în timpul clasei', 'classLog.knee', c.knee ?? null, { knee: true, hint: '0 = deloc' })}
+    <label class="f">Pe scurt, cum a fost<textarea data-path="classLog.notes" placeholder="ex. am sărit peste sărituri, am făcut variantele ușoare">${esc(c.notes || '')}</textarea></label>
+  </section>`;
+}
 function outdoorHTML(day) {
   const o = day.outdoor || {};
   const cur = o.type || (day.kind === 'inot' ? 'inot' : 'drumetie');
@@ -1286,8 +1306,9 @@ function outdoorHTML(day) {
       <label class="f">Urcare (m)<input type="text" inputmode="numeric" data-path="outdoor.up" data-type="num" value="${o.up ?? ''}"></label>
       <label class="f">Coborâre (m)<input type="text" inputmode="numeric" data-path="outdoor.down" data-type="num" value="${o.down ?? ''}"></label>
     </div>
-    ${q('Durere la genunchi la coborâre', 'outdoor.kneeDown', o.kneeDown ?? null, { knee: true })}
-    <label class="f">Notițe<textarea data-path="outdoor.notes">${esc(o.notes || '')}</textarea></label>
+    ${q('Cât de greu a fost (RPE)', 'outdoor.rpe', o.rpe ?? null, { min: 1, max: 10, hint: '10 = maxim' })}
+    ${q(cur === 'inot' ? 'Genunchiul în timpul înotului' : 'Durere la genunchi la coborâre', 'outdoor.kneeDown', o.kneeDown ?? null, { knee: true })}
+    <label class="f">Pe scurt, cum a fost<textarea data-path="outdoor.notes" placeholder="ex. coborâre lungă, picioarele terminate, genunchiul ok">${esc(o.notes || '')}</textarea></label>
     ${photosHTML(o.photos, 'outdoor')}
   </section>`;
 }
@@ -1295,7 +1316,7 @@ function outdoorHTML(day) {
 /* ---------- yesterday review & occasions ---------- */
 function yesterdayHTML(d) {
   const y = addDays(d, -1), yd = S.days[y] || {}, plan = S.plans[y], l = yd.log || {};
-  const trained = plan?.blocks?.length || plan?.code === 'AFARĂ' || yd.log || yd.outdoor || (yd.cardio || []).length;
+  const trained = plan?.blocks?.length || plan?.code === 'AFARĂ' || yd.log || yd.outdoor || yd.classLog || (yd.cardio || []).length;
   if (!trained) return '';
   const opts = [['complet', 'Da, tot'], ['partial', 'Parțial'], ['minim', 'Varianta minimă'], ['sarit', 'Nu']];
   const chip = (path, val, label, cur) => `<button class="chip" data-act="set" data-path="${path}" data-val="${esc(val)}" data-str="1" data-date="${y}" aria-pressed="${cur === val}">${esc(label)}</button>`;
