@@ -474,7 +474,8 @@ async function pull() {
     S.ready.days = true; S.sync = QUEUE.length ? 'pending' : 'ok';
   } catch (e) {
     S.sync = e.status === 0 ? 'offline' : (e.status === 401 || e.status === 403 || e.status === 404) ? 'auth' : 'error';
-    if (e.status !== 0) toast(errText(e));
+    S.syncMsg = errText(e);
+    if (e.status !== 0) toast(S.syncMsg);
   }
   render(); flush();
 }
@@ -568,7 +569,12 @@ function render() {
   renderChrome();
   const v = $('#view');
   if (!GH.token) { v.innerHTML = `<section class="card"><h2>Conectează-te la GitHub</h2><p>Jurnalele se salvează în repo-ul tău privat. Lipește aici tokenul creat în GitHub; rămâne salvat doar pe acest dispozitiv.</p>${ghForm()}</section>`; return; }
-  if (!S.ready.days) { v.innerHTML = `<div class="card flat"><p class="empty">${S.sync === 'loading' ? 'Se încarcă jurnalele din GitHub…' : 'Nu am putut încărca datele. Apasă butonul de sincronizare din antet.'}</p></div>`; return; }
+  if (!S.ready.days) {
+    v.innerHTML = S.sync === 'loading'
+      ? `<div class="card flat"><p class="empty">Se încarcă jurnalele din GitHub…</p></div>`
+      : `<section class="card"><h2>Nu am putut încărca datele</h2><p>${esc(S.syncMsg || 'Verifică tokenul sau conexiunea la internet.')}</p>${ghForm()}</section>`;
+    return;
+  }
   v.innerHTML = ({ azi: viewAzi, mancare: viewFood, progres: viewProgress, calendar: viewCalendar, catalog: viewCatalog, profil: viewProfile }[S.tab] || viewAzi)();
   hydratePhotos(v);
 }
@@ -975,7 +981,7 @@ function exSheet(id) {
 /* ---------- profile ---------- */
 function viewProfile() {
   const p = S.profile;
-  if (!p) return `<section class="card flat"><p class="empty">Profilul apare imediat ce îl încarcă Claude.</p></section>`;
+  if (!p) return `<section class="card flat"><p class="empty">Profilul nu s-a încărcat încă.</p></section><section class="card"><h2>Conexiunea GitHub</h2>${ghForm()}</section>`;
   const t = today();
   const tg = p.targets || {};
   let h = `<section class="card"><h2>Obiective</h2><dl class="kv">
