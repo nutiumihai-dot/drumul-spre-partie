@@ -439,7 +439,7 @@ function errText(e) {
 function applyLocal(op) {
   if (op.photo) return;
   if (op.file.startsWith('days/')) S.days[op.key] = merge(S.days[op.key], op.patch);
-  else if (op.file === 'favorites.json') S.favMap[op.key] = merge(S.favMap[op.key], op.patch);
+  else if (op.file === 'favorites.json') { if (op.replace && op.patch == null) delete S.favMap[op.key]; else S.favMap[op.key] = merge(S.favMap[op.key], op.patch); derive(); }
   else if (op.file === 'catalog.json') S.catalog[op.key] = merge(S.catalog[op.key], op.patch);
   else if (op.file === 'config/profile.json') S.profile = merge(S.profile, op.patch);
 }
@@ -499,13 +499,19 @@ function pendingGroups() {
     if (o.photo) { const g = groups.get('photos') || { title: 'Poze noi', lines: [] }; g.lines.push([o.file.split('/').pop(), 'poză']); groups.set('photos', g); return; }
     const gk = `${o.file}|${o.key ?? ''}`;
     const g = groups.get(gk) || { file: o.file, key: o.key, patch: {} };
-    g.patch = merge(g.patch, o.patch); groups.set(gk, g);
+    if (o.replace && o.patch == null) g.deleted = true; else { g.deleted = false; g.patch = merge(g.patch, o.patch); }
+    groups.set(gk, g);
   });
   return [...groups.values()].map(g => {
     if (g.lines) return g;
     let title = 'Altele';
     if (g.file.startsWith('days/')) title = fmtDate(g.key);
-    else if (g.file === 'favorites.json') title = `Masă favorită: ${g.patch.name || S.favMap[g.key]?.name || ''}`;
+    else if (g.file === 'favorites.json') {
+      const f = { ...(FAV_NAMES[g.key] || S.favMap[g.key] || {}), ...g.patch };
+      title = `${f.kind === 'item' ? 'Aliment favorit' : 'Masă favorită'}: ${f.name || ''}`;
+      if (g.deleted) return { title, sortKey: 'zz', lines: [['Favorit', 'șters']] };
+      if (f.kind === 'item') return { title, sortKey: 'zz', lines: [['Aliment', [f.name, f.qty, f.brand].filter(Boolean).join(' · ')]] };
+    }
     else if (g.file === 'catalog.json') title = `Catalog: ${exName(g.key)}`;
     else if (g.file === 'config/profile.json') title = 'Profil';
     return { title, sortKey: g.key || 'zz', lines: describe(g.patch) };
@@ -1343,7 +1349,9 @@ function viewFood() {
     ${kcal == null && meals.length ? `<p class="muted small">Estimarea apare după procesarea de seară (21:30).</p>` : ''}
     ${day.coach?.foodNote ? `<div class="msg"><p class="pre">${esc(day.coach.foodNote)}</p></div>` : ''}
   </section>
-  <div class="row"><button class="btn primary" data-act="meal-new">+ Adaugă masă</button><button class="btn" data-act="meal-fav">Din favorite</button></div></div><div class="col-b">`;
+  <div class="row"><button class="btn primary" data-act="meal-new">+ Adaugă masă</button><button class="btn" data-act="meal-fav">Favorite</button></div>
+  ${favItems().length ? `<section class="card"><span class="eyebrow">Adaugă rapid</span><div class="chips">${favItems().map(f => `<button class="chip" data-act="quick-item" data-id="${f.id}">${esc(f.name)}${f.qty ? ' · ' + esc(f.qty) : ''}</button>`).join('')}</div></section>` : ''}
+  </div><div class="col-b">`;
   if (!meals.length) h += `<section class="card flat"><p class="empty">Nicio masă notată în ziua asta. Scrie ce ai mâncat și cam cât; caloriile le estimează Claude.</p></section>`;
   else {
     h += `<section class="card">`;
@@ -1382,12 +1390,13 @@ function mealSheet(meal, isNew) {
       </div>
       <datalist id="m-places">${places.map(p => `<option value="${esc(p)}">`).join('')}</datalist>
       <span class="eyebrow">Ce ai mâncat</span>
+      ${favItems().length ? `<div class="sec"><span class="small muted">Alimente favorite: atinge ca să le adaugi</span><div class="chips">${favItems().map(f => `<button type="button" class="chip" data-favitem="${f.id}">${esc(f.name)}${f.qty ? ' · ' + esc(f.qty) : ''}</button>`).join('')}</div></div>` : ''}
       ${m.items.map((it, i) => `<div class="item-row" data-row="${i}">
         <label class="f full">Aliment / fel<input type="text" data-k="name" value="${esc(it.name)}" placeholder="ex. ouă ochiuri"></label>
         <label class="f">Cantitate<input type="text" data-k="qty" value="${esc(it.qty)}" placeholder="ex. 2 buc, 200 g"></label>
         <label class="f">Brand<input type="text" data-k="brand" value="${esc(it.brand)}" placeholder="opțional"></label>
         <label class="f">Preparare<select data-k="prep">${PREP.map(p => `<option value="${p}" ${it.prep === p ? 'selected' : ''}>${p || '—'}</option>`).join('')}</select></label>
-        <div class="row" style="align-self:end"><button class="btn sm ghost" data-rm="${i}">Scoate</button></div>
+        <div class="row" style="align-self:end"><button class="btn sm ghost" data-star="${i}" title="Salvează alimentul la favorite">★ Favorit</button><button class="btn sm ghost" data-rm="${i}">Scoate</button></div>
       </div>`).join('')}
       <button class="btn sm" id="m-add">+ Încă un aliment</button>
       <div class="grid2">
@@ -1400,6 +1409,20 @@ function mealSheet(meal, isNew) {
       <div class="row"><button class="btn primary" id="m-save">Salvează masa</button><button class="btn ghost" data-act="close">Renunță</button></div>`;
     $('#m-add').onclick = () => { collect(); m.items.push({ name: '', brand: '', qty: '', prep: '' }); draw(); };
     $$('[data-rm]', p).forEach(b => b.onclick = () => { collect(); m.items.splice(+b.dataset.rm, 1); if (!m.items.length) m.items.push({ name: '', brand: '', qty: '', prep: '' }); draw(); });
+    $$('[data-favitem]', p).forEach(b => b.onclick = () => {
+      collect();
+      const f = S.favMap[b.dataset.favitem]; if (!f) return;
+      const item = { name: f.name || '', brand: f.brand || '', qty: f.qty || '', prep: f.prep || '' };
+      const empty = m.items.findIndex(i => !i.name.trim());
+      if (empty >= 0) m.items[empty] = item; else m.items.push(item);
+      draw();
+    });
+    $$('[data-star]', p).forEach(b => b.onclick = () => {
+      collect();
+      const it = m.items[+b.dataset.star];
+      if (!it?.name?.trim()) { toast('Scrie întâi numele alimentului.'); return; }
+      saveFavItem(it);
+    });
     hydratePhotos(p);
     const ph = $('#m-photos'); if (ph) ph.onchange = async () => { collect(); const ids = await uploadFiles(ph.files); m.photos.push(...ids); draw(); };
     $('#m-save').onclick = async () => {
@@ -1422,16 +1445,41 @@ function mealSheet(meal, isNew) {
 function defaultMealType() { const h = new Date().getHours(); return h < 11 ? 'mic-dejun' : h < 16 ? 'pranz' : h < 22 ? 'cina' : 'gustare'; }
 function nowTime() { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 
+// Favorites hold whole meals and single foods (kind: 'item'), e.g. the morning coffee or a yogurt.
+const FAV_NAMES = {};
+const favItems = () => S.favorites.filter(f => f.kind === 'item').sort((a, b) => a.name.localeCompare(b.name));
+const favMeals = () => S.favorites.filter(f => f.kind !== 'item');
+function saveFavItem(it) {
+  const same = favItems().find(f => f.name.toLowerCase() === it.name.trim().toLowerCase() && (f.qty || '') === (it.qty || '') && (f.brand || '') === (it.brand || ''));
+  if (same) { toast(`„${it.name}” e deja la favorite.`); return; }
+  saveTo('favorites.json', uid(), { kind: 'item', name: it.name.trim(), brand: it.brand || '', qty: it.qty || '', prep: it.prep || '' });
+  toast(`„${it.name}” e la favorite. Îl trimiți cu butonul de jos.`);
+}
+function deleteFav(id) {
+  FAV_NAMES[id] = S.favMap[id];
+  queueOp({ file: 'favorites.json', key: id, replace: true, patch: null });
+}
+function quickItem(id) {
+  const f = S.favMap[id]; if (!f) return;
+  mealSheet({ id: uid(), type: defaultMealType(), time: S.date === today() ? nowTime() : '', source: 'acasa', items: [{ name: f.name, brand: f.brand || '', qty: f.qty || '', prep: f.prep || '' }] }, true);
+}
 function favSheet() {
   openSheet();
   const p = $('#sheetPanel');
-  p.innerHTML = `<div class="sheet-head"><h2>Mese favorite</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
-    ${S.favorites.length ? S.favorites.map(f => `<div class="card"><div class="row between"><strong>${esc(f.name)}</strong><button class="btn sm primary" data-fav="${f.id}">Adaugă azi</button></div><p class="muted small">${esc((f.items || []).map(i => i.name + (i.qty ? ' ' + i.qty : '')).join(' · '))}</p></div>`).join('')
-      : `<p class="empty">Nu ai încă favorite. La o masă salvată apasă „Salvează ca favorit”.</p>`}`;
+  const meals = favMeals(), items = favItems();
+  p.innerHTML = `<div class="sheet-head"><h2>Favorite</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+    <h3>Mese</h3>
+    ${meals.length ? meals.map(f => `<div class="card"><div class="row between"><strong>${esc(f.name)}</strong><span class="row"><button class="btn sm primary" data-fav="${f.id}">Adaugă</button><button class="btn sm ghost" data-delfav="${f.id}" aria-label="Șterge favoritul">×</button></span></div><p class="muted small">${esc((f.items || []).map(i => i.name + (i.qty ? ' ' + i.qty : '')).join(' · '))}</p></div>`).join('')
+      : `<p class="empty">La o masă salvată apasă „Salvează ca favorit”.</p>`}
+    <h3>Alimente</h3>
+    ${items.length ? `<section class="card">${items.map(f => `<div class="row between"><span><strong>${esc(f.name)}</strong>${f.qty ? ` · ${esc(f.qty)}` : ''}${f.brand ? ` <span class="muted">(${esc(f.brand)})</span>` : ''}</span><span class="row"><button class="btn sm primary" data-quick="${f.id}">Adaugă</button><button class="btn sm ghost" data-delfav="${f.id}" aria-label="Șterge favoritul">×</button></span></div>`).join('')}</section>`
+      : `<p class="empty">În fereastra unei mese, apasă „★ Favorit” lângă un aliment (cafea, ouă, iaurt, bere…).</p>`}`;
   $$('[data-fav]', p).forEach(b => b.onclick = () => {
-    const f = S.favorites.find(x => x.id === b.dataset.fav);
+    const f = S.favMap[b.dataset.fav];
     mealSheet({ id: uid(), type: f.type || defaultMealType(), time: nowTime(), source: f.source || 'acasa', place: f.place || '', items: f.items || [] }, true);
   });
+  $$('[data-quick]', p).forEach(b => b.onclick = () => quickItem(b.dataset.quick));
+  $$('[data-delfav]', p).forEach(b => b.onclick = () => { deleteFav(b.dataset.delfav); toast('Favorit șters. Se trimite cu butonul de jos.'); favSheet(); });
 }
 function starSheet(meal) {
   openSheet();
@@ -1642,6 +1690,7 @@ document.addEventListener('click', async e => {
   else if (a === 'day') { S.date = addDays(S.date, +b.dataset.n); S.confirm = null; render(); ensureRange(S.date, S.date); }
   else if (a === 'pull') pull();
   else if (a === 'review') reviewSheet();
+  else if (a === 'quick-item') quickItem(b.dataset.id);
   else if (a === 'done-all' && canLog(S.date)) {
     const fb = S.fallback[S.date] || S.days[S.date]?.log?.completed === 'minim';
     saveDay(S.date, { log: { completed: fb ? 'minim' : 'complet', changes: null, skipReason: null } });
