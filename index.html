@@ -115,7 +115,7 @@ button { cursor: pointer; }
 /* main + tabs */
 main { padding-block: 16px calc(92px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
 .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); box-shadow: 0 -4px 20px rgba(13, 22, 38, .08); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
-.tabs .wrap { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; padding-block: 6px; }
+.tabs .wrap { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding-block: 6px; }
 .tabs button { border: 0; background: none; padding: 6px 0 5px; border-radius: 12px; font-size: 11px; font-weight: 600; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .tabs svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .tabs button[aria-current="page"] { color: var(--accent); }
@@ -286,6 +286,14 @@ textarea { min-height: 70px; resize: vertical; }
   .btn:active, .chip:active, .scale button:active { transform: scale(.96); }
 }
 
+/* messages */
+.bubble { gap: 6px; max-width: 92%; }
+.bubble.coach { align-self: flex-start; border-left: 4px solid var(--accent); border-radius: 4px 16px 16px 4px; }
+.bubble.me { align-self: flex-end; background: var(--ice-soft); box-shadow: none; border-radius: 16px 4px 4px 16px; }
+.v-mesaje { align-items: stretch; }
+.day-sep { text-align: center; margin-top: 6px; }
+.tabs button { position: relative; }
+.tabs button[data-badge]:not([data-badge=""])::after { content: attr(data-badge); position: absolute; top: 2px; right: calc(50% - 22px); min-width: 17px; height: 17px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
 /* availability */
 .avail { align-self: flex-start; border: 2px dashed var(--line); background: transparent; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--muted); text-align: left; }
 .avail.set { border-style: solid; border-color: var(--ice); background: var(--ice-soft); color: var(--ice); }
@@ -335,6 +343,7 @@ details.more[open] summary { margin-bottom: 8px; }
   .sheet-panel { border-radius: 22px; max-height: 88%; max-width: 720px; }
 }
 @media (min-width: 1500px) { .masonry { column-count: 3; } }
+@media (min-width: 1000px) and (max-width: 1320px) { .tabs button { font-size: 0; gap: 0; padding: 9px 11px; } .tabs button svg { width: 19px; height: 19px; } }
 </style>
 </head>
 <body>
@@ -360,6 +369,7 @@ details.more[open] summary { margin-bottom: 8px; }
 <nav class="tabs" aria-label="Secțiuni">
   <div class="wrap" id="tabs">
     <button data-act="tab" data-tab="azi"><svg viewBox="0 0 24 24"><path d="M3 20l6-10 4 6 3-4 5 8z"/><circle cx="17" cy="6" r="2"/></svg>Azi</button>
+    <button data-act="tab" data-tab="mesaje"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>Mesaje</button>
     <button data-act="tab" data-tab="mancare"><svg viewBox="0 0 24 24"><path d="M7 3v8M5 3v5a2 2 0 004 0V3M7 11v10M17 3c-2 2-3 5-3 8h3v10"/></svg>Mâncare</button>
     <button data-act="tab" data-tab="progres"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-5 3 3 5-7"/></svg>Progres</button>
     <button data-act="tab" data-tab="calendar"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Calendar</button>
@@ -458,9 +468,9 @@ const SRC = [['acasa', 'Acasă'], ['meniu', 'Meniul zilei'], ['glovo', 'Glovo / 
 const PREP = ['', 'crud', 'fiert', 'la grătar', 'la cuptor', 'prăjit', 'altul'];
 const OUT = [['drumetie', 'Drumeție'], ['plimbare', 'Plimbare'], ['inot', 'Înot'], ['bicicleta', 'Bicicletă'], ['altul', 'Altul']];
 
-const S = { index: {}, ready: {}, sync: 'ok', tab: 'azi', date: today(), profile: null, days: {}, plans: {}, catalog: {}, msgMap: {}, favMap: {}, messages: [], favorites: [], fallback: {}, range: 30, calStart: null, confirm: null };
+const S = { index: {}, ready: {}, sync: 'ok', tab: 'azi', date: today(), profile: null, days: {}, plans: {}, catalog: {}, msgMap: {}, reqMap: {}, favMap: {}, messages: [], requests: [], favorites: [], fallback: {}, range: 30, calStart: null, confirm: null };
 try { const t = localStorage.getItem('dsp-tab'); if (t) S.tab = t; } catch (e) {}
-if (/^#(azi|mancare|progres|calendar|catalog|profil)$/.test(location.hash)) S.tab = location.hash.slice(1);
+if (/^#(azi|mesaje|mancare|progres|calendar|catalog|profil)$/.test(location.hash)) S.tab = location.hash.slice(1);
 
 /* ---------- GitHub storage ---------- */
 // Data lives in a private repo: days/YYYY-MM.json, plan/YYYY-MM.json, messages/YYYY-MM.json keyed by date/id,
@@ -511,6 +521,7 @@ function applyLocal(op) {
   else if (op.file === 'favorites.json') { if (op.replace && op.patch == null) delete S.favMap[op.key]; else S.favMap[op.key] = merge(S.favMap[op.key], op.patch); derive(); }
   else if (op.file === 'catalog.json') S.catalog[op.key] = merge(S.catalog[op.key], op.patch);
   else if (op.file === 'config/profile.json') S.profile = merge(S.profile, op.patch);
+  else if (op.file.startsWith('requests/')) { S.reqMap[op.key] = merge(S.reqMap[op.key], op.patch); derive(); }
 }
 function saveQueue() {
   if (!store.set('dsp-queue', QUEUE)) toast('Memoria dispozitivului e plină (probabil din cauza pozelor). Trimite notițele acum.');
@@ -587,6 +598,8 @@ function pendingGroups() {
     }
     else if (g.file === 'catalog.json') title = `Catalog: ${exName(g.key)}`;
     else if (g.file === 'config/profile.json') title = 'Profil';
+    else if (g.file.startsWith('requests/')) return { title: 'Mesaj către antrenor', sortKey: 'zz', lines: [['Text', g.patch.text || '']] };
+    else if (g.file === 'config/push.json') return { title: 'Notificări', sortKey: 'zz', lines: [['Dispozitiv', g.deleted ? 'dezactivat' : 'activat']] };
     return { title, sortKey: g.key || 'zz', lines: describe(g.patch) };
   }).sort((a, b) => (a.sortKey || 'zz').localeCompare(b.sortKey || 'zz'));
 }
@@ -599,6 +612,8 @@ function commitMessage(ops) {
   if (ops.some(o => o.file === 'favorites.json')) parts.push('favorite');
   if (ops.some(o => o.file === 'catalog.json')) parts.push('catalog');
   if (ops.some(o => o.file === 'config/profile.json')) parts.push('profil');
+  if (ops.some(o => o.file.startsWith('requests/'))) parts.push('mesaj către antrenor');
+  if (ops.some(o => o.file === 'config/push.json')) parts.push('notificări');
   return `Jurnal: ${parts.join(' · ')}`;
 }
 
@@ -719,22 +734,23 @@ const CACHE_DAYS = 92;
 function cacheSave() {
   const from = addDays(today(), -CACHE_DAYS);
   const recent = obj => Object.fromEntries(Object.entries(obj || {}).filter(([k, v]) => (v?.date || k) >= from));
-  store.set('dsp-cache', { index: S.index, profile: S.profile, catalog: S.catalog, favMap: S.favMap, days: recent(S.days), plans: recent(S.plans), msgMap: recent(S.msgMap) });
+  store.set('dsp-cache', { index: S.index, profile: S.profile, catalog: S.catalog, favMap: S.favMap, days: recent(S.days), plans: recent(S.plans), msgMap: recent(S.msgMap), reqMap: recent(S.reqMap) });
 }
 function cacheLoad() {
   const c = store.get('dsp-cache', null); if (!c) return false;
-  Object.assign(S, { index: c.index || {}, profile: c.profile, catalog: c.catalog || {}, favMap: c.favMap || {}, days: c.days || {}, plans: c.plans || {}, msgMap: c.msgMap || {} });
+  Object.assign(S, { index: c.index || {}, profile: c.profile, catalog: c.catalog || {}, favMap: c.favMap || {}, days: c.days || {}, plans: c.plans || {}, msgMap: c.msgMap || {}, reqMap: c.reqMap || {} });
   derive(); S.ready.days = true; return true;
 }
 function derive() {
+  S.requests = Object.values(S.reqMap || {}).sort((a, b) => (Date.parse(b.ts) || 0) - (Date.parse(a.ts) || 0));
   S.messages = Object.values(S.msgMap || {}).sort((a, b) => (Date.parse(b.ts) || 0) - (Date.parse(a.ts) || 0));
   S.favorites = Object.entries(S.favMap || {}).map(([id, f]) => ({ id, ...f }));
 }
 const monthsBetween = (a, b) => { const out = []; let m = a.slice(0, 7); const end = b.slice(0, 7); while (m <= end) { out.push(m); const [y, mm] = m.split('-').map(Number); m = mm === 12 ? `${y + 1}-01` : `${y}-${pad(mm + 1)}`; } return out; };
 async function loadJson(path) { return (await readFile(path)).data; }
 async function loadMonth(m) {
-  const [d, p, ms] = await Promise.all([`days/${m}.json`, `plan/${m}.json`, `messages/${m}.json`].map(loadJson));
-  Object.assign(S.days, d || {}); Object.assign(S.plans, p || {}); Object.assign(S.msgMap, ms || {});
+  const [d, p, ms, rq] = await Promise.all([`days/${m}.json`, `plan/${m}.json`, `messages/${m}.json`, `requests/${m}.json`].map(loadJson));
+  Object.assign(S.days, d || {}); Object.assign(S.plans, p || {}); Object.assign(S.msgMap, ms || {}); Object.assign(S.reqMap, rq || {});
   loadedMonths.add(m);
 }
 async function ensureRange(from, to) {
@@ -752,8 +768,8 @@ async function pull() {
     const t = today();
     const months = monthsBetween(addDays(t, -40), addDays(t, 14));
     if (!months.includes(S.date.slice(0, 7))) months.push(S.date.slice(0, 7));
-    const old = { days: S.days, plans: S.plans, msgMap: S.msgMap };
-    S.days = {}; S.plans = {}; S.msgMap = {}; loadedMonths.clear();
+    const old = { days: S.days, plans: S.plans, msgMap: S.msgMap, reqMap: S.reqMap };
+    S.days = {}; S.plans = {}; S.msgMap = {}; S.reqMap = {}; loadedMonths.clear();
     try { await Promise.all(months.map(loadMonth)); }
     catch (e) { Object.assign(S, old); throw e; }
     S.profile = prof; S.catalog = cat || {}; S.favMap = fav || {}; S.index = idx || {};
@@ -988,6 +1004,8 @@ function maxPain(day) {
 /* ---------- header ---------- */
 function renderChrome() {
   $$('#tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === S.tab ? 'page' : 'false'));
+  if (S.tab === 'mesaje') markSeen();
+  const un = unreadCount(); const mb = $('#tabs [data-tab="mesaje"]'); if (mb) mb.dataset.badge = un ? String(un) : '';
   $('#datebar').hidden = !(S.tab === 'azi' || S.tab === 'mancare');
   const t = today();
   $('#dateLabel').textContent = S.date === t ? `Azi · ${fmtShort(t)}` : fmtDate(S.date);
@@ -1067,7 +1085,7 @@ function render() {
       : `<section class="card"><h2>Nu am putut încărca datele</h2><p>${esc(S.syncMsg || 'Verifică tokenul sau conexiunea la internet.')}</p>${ghForm()}</section>`;
     return;
   }
-  v.innerHTML = ({ azi: viewAzi, mancare: viewFood, progres: viewProgress, calendar: viewCalendar, catalog: viewCatalog, profil: viewProfile }[S.tab] || viewAzi)();
+  v.innerHTML = ({ azi: viewAzi, mesaje: viewMessages, mancare: viewFood, progres: viewProgress, calendar: viewCalendar, catalog: viewCatalog, profil: viewProfile }[S.tab] || viewAzi)();
   hydratePhotos(v);
 }
 function ghForm() {
@@ -1086,7 +1104,7 @@ function viewAzi() {
   h += todayHero(d, day);
   if (d === t) {
     const m = S.messages[0];
-    if (m) h += `<section class="card"><div class="row between"><span class="eyebrow">Mesaj de la Claude · ${esc(fmtShort(m.date || t))}</span><button class="linkbtn small" data-act="msgs">Toate mesajele</button></div><div class="msg"><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></div><button class="linkbtn small" data-act="manual">Laptopul e închis? Antrenor fără PC</button></section>`;
+    if (m) h += `<section class="card"><div class="row between"><span class="eyebrow">Mesaj de la Claude · ${esc(fmtShort(m.date || t))}</span><button class="linkbtn small" data-act="tab" data-tab="mesaje">Toate mesajele</button></div><div class="msg"><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></div><button class="linkbtn small" data-act="manual">Laptopul e închis? Antrenor fără PC</button></section>`;
     h += yesterdayHTML(d);
   }
 
@@ -1619,6 +1637,53 @@ function starSheet(meal) {
   };
 }
 
+/* ---------- messages: coach messages and requests to the coach, one timeline ---------- */
+let SEEN = '';
+const seenAt = () => { try { return SEEN || localStorage.getItem('dsp-seen') || ''; } catch (e) { return SEEN; } };
+function markSeen() { SEEN = new Date().toISOString(); try { localStorage.setItem('dsp-seen', SEEN); } catch (e) {} }
+const unreadCount = () => { const s = Date.parse(seenAt()) || 0; return S.messages.filter(m => (Date.parse(m.ts) || 0) > s).length; };
+function viewMessages() {
+  const items = [
+    ...S.messages.map(m => ({ who: 'coach', ts: m.ts, date: m.date, m })),
+    ...S.requests.map(r => ({ who: 'me', ts: r.ts, date: r.date, r }))
+  ].sort((a, b) => (Date.parse(b.ts) || 0) - (Date.parse(a.ts) || 0));
+  let h = `<div class="v v-mesaje"><section class="card"><h2>Scrie-i antrenorului</h2>
+    <textarea id="askText" placeholder="ex. pune-mi mâine un full-body de activare · azi am doar 30 de minute · ce pot mânca la o nuntă?"></textarea>
+    <div class="row"><button class="btn primary" data-act="ask-send">Trimite</button><span class="muted small">Îți răspund la următoarea verificare (din oră în oră, cât PC-ul e pornit).</span></div></section>`;
+  if (!items.length) h += `<section class="card flat"><p class="empty">Încă nu sunt mesaje.</p></section>`;
+  let lastDay = '';
+  items.forEach(it => {
+    if (it.date !== lastDay) { lastDay = it.date; h += `<h3 class="day-sep">${esc(fmtDate(it.date || today()))}</h3>`; }
+    if (it.who === 'coach') {
+      const m = it.m, time = m.ts ? new Date(m.ts) : null;
+      h += `<section class="card bubble coach"><div class="row between"><span class="eyebrow">Claude${time ? ' · ' + pad(time.getHours()) + ':' + pad(time.getMinutes()) : ''}</span>${m.kind && m.kind !== 'feedback' ? `<span class="pill">${esc(m.kind)}</span>` : ''}</div><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></section>`;
+    } else {
+      const r = it.r, pendingSend = QUEUE.some(o => o.key === r.id);
+      h += `<section class="card bubble me"><p class="pre">${esc(r.text)}</p><span class="small muted">${pendingSend ? 'netrimis încă' : r.status === 'rezolvat' ? 'Răspuns primit' : 'Trimis · aștept răspunsul'}</span></section>`;
+    }
+  });
+  h += `<button class="btn ghost" data-act="older">Încarcă mesajele mai vechi</button></div>`;
+  return h;
+}
+const VAPID_PUBLIC = 'BHnS7sEmWIRT9J_coOPF53sBi5uDjp-q4158fg5wX9kFWPrv-_RYE-K11vL7kErsHIBcZ_gaBACV6g5PrpDm8AE';
+function b64urlToBytes(s) { const p = '='.repeat((4 - s.length % 4) % 4); const b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); }
+function deviceId() { try { let id = localStorage.getItem('dsp-device'); if (!id) { id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); localStorage.setItem('dsp-device', id); } return id; } catch (e) { return 'd-unknown'; } }
+async function enablePush(btn) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) { toast('Browserul ăsta nu suportă notificări push.'); return; }
+  btn.disabled = true;
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { toast('Fără permisiune, nu pot trimite notificări. O poți da din setările aplicației.'); btn.disabled = false; return; }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64urlToBytes(VAPID_PUBLIC) });
+    queueOp({ file: 'config/push.json', key: deviceId(), replace: true, patch: sub.toJSON() });
+    await sendAll();
+    try { localStorage.setItem('dsp-push', '1'); } catch (e) {}
+    toast('Notificările sunt activate pe acest dispozitiv.'); render();
+  } catch (e) { toast('Nu am putut activa notificările.'); btn.disabled = false; }
+}
+const pushOn = () => { try { return localStorage.getItem('dsp-push') === '1' && Notification.permission === 'granted'; } catch (e) { return false; } };
+
 /* ---------- progress ---------- */
 function svgChart(o) {
   const W = 640, H = o.h || 190, L = 44, R = 10, T = 12, B = 26;
@@ -1761,6 +1826,8 @@ function viewProfile() {
     <label class="f">Exerciții de evitat (câte unul pe rând)<textarea data-prof="avoid">${esc((p.avoid || []).join('\n'))}</textarea></label></section>`;
   if (p.equipment) h += `<section class="card"><h2>Echipament acasă</h2><ul>${(p.equipment.home || []).map(e => `<li>${esc(e)}</li>`).join('')}</ul>${p.equipment.plates ? `<p class="small"><strong>Discuri:</strong> ${esc(p.equipment.plates)}</p>` : ''}${p.equipment.notes ? `<p class="small muted">${esc(p.equipment.notes)}</p>` : ''}</section>`;
   h += `<section class="card"><h2>Sală</h2><p class="muted">${esc(p.gym || 'Nicio sală aleasă încă. Când te hotărăști, spune-i lui Claude ce aparate are.')}</p></section>`;
+  h += `<section class="card"><h2>Notificări</h2><p class="muted small">Primești o notificare pe telefon când îți scriu un mesaj. Activează-le doar pe dispozitivul pe care vrei să le primești.</p>
+    ${pushOn() ? '<p class="done-status">Activate pe acest dispozitiv</p>' : '<button class="btn" data-act="push-on">Activează notificările aici</button>'}</section>`;
   h += `<section class="card"><h2>Aplicația</h2><p class="muted small">Datele vin din repo-ul privat ${esc(GH.owner)}/${esc(GH.repo)}. ${QUEUE.length ? `${QUEUE.length} salvări așteaptă să fie trimise.` : 'Toate salvările sunt în GitHub.'}</p>
     <div class="row"><button class="btn primary" data-act="update-app">Actualizează aplicația și datele</button><button class="btn" data-act="manual">Antrenor fără PC</button></div>
     <details><summary class="small muted">Conexiunea GitHub</summary><div class="sec" style="margin-top:10px">${ghForm()}</div></details></section>`;
@@ -1810,10 +1877,20 @@ async function uploadFiles(files) {
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const a = b.dataset.act;
-  if (a === 'tab') { S.tab = b.dataset.tab; S.confirm = null; try { localStorage.setItem('dsp-tab', S.tab); } catch (er) {} render(); window.scrollTo(0, 0); }
+  if (a === 'tab') { S.tab = b.dataset.tab; if (S.tab === 'mesaje') markSeen(); S.confirm = null; try { localStorage.setItem('dsp-tab', S.tab); } catch (er) {} render(); window.scrollTo(0, 0); }
   else if (a === 'day') { S.date = addDays(S.date, +b.dataset.n); S.confirm = null; render(); ensureRange(S.date, S.date); }
   else if (a === 'pull') pull();
   else if (a === 'review') reviewSheet();
+  else if (a === 'ask-send') {
+    const txt = ($('#askText')?.value || '').trim();
+    if (!txt) { toast('Scrie întâi ce vrei să-mi ceri.'); return; }
+    const id = 'r' + Date.now().toString(36), now = new Date();
+    queueOp({ file: `requests/${today().slice(0, 7)}.json`, key: id, patch: { id, ts: now.toISOString(), date: today(), text: txt.slice(0, 2000), status: 'nou' } });
+    $('#askText').value = '';
+    await sendAll();
+  }
+  else if (a === 'push-on') enablePush(b);
+  else if (a === 'older') { const first = S.profile?.startDate || addDays(today(), -365); await ensureRange(first, today()); render(); }
   else if (a === 'reject') rejectSheet(b.dataset.ex);
   else if (a === 'unreject') saveDay(S.date, { rejects: { [b.dataset.ex]: null } });
   else if (a === 'avail') availSheet(b.dataset.date);

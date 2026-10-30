@@ -1,6 +1,6 @@
 // Network-first for the app's own files so updates arrive on the next open; cached copy when offline.
 // GitHub API calls are never cached here: the page talks to api.github.com directly.
-const CACHE = 'dsp-v14';
+const CACHE = 'dsp-v15';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -27,4 +27,21 @@ self.addEventListener('fetch', e => {
   e.respondWith(fetch(e.request, { cache: 'no-cache' }).then(res => {
     const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return res;
   }).catch(() => caches.match(e.request).then(hit => hit || caches.match('index.html'))));
+});
+
+// Push from the coach's PC (antrenor/notifica.py): show it, and open the Messages tab on tap.
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = { title: 'Summit Building', body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Mesaj de la antrenor', {
+    body: d.body || '', icon: 'icon-192.png', badge: 'icon-192.png', tag: 'coach', renotify: true, data: { url: d.url || './#mesaje' }
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = new URL(e.notification.data?.url || './#mesaje', self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    for (const c of list) { if ('focus' in c) { c.navigate(url); return c.focus(); } }
+    return self.clients.openWindow(url);
+  }));
 });
