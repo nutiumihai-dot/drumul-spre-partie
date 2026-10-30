@@ -418,6 +418,7 @@ function describe(patch) {
   const walk = (o, pre) => Object.entries(o).forEach(([k, v]) => {
     const p = pre ? `${pre}.${k}` : k;
     if (p === 'date') return;
+    if (p === 'cardio') { lines.push(['Cardio', v.length ? v.map(cardioLine).join(' · ') : 'tot șters']); return; }
     if (p === 'meals') { lines.push(['Mese', v.length ? v.map(m => `${MEALT.find(x => x[0] === m.type)?.[1] || m.type}${m.time ? ' ' + m.time : ''}: ${(m.items || []).map(i => i.name).join(', ') || 'poze'}`).join(' · ') : 'toate șterse']); return; }
     if (pre === 'log.sets') { lines.push([`Serii · ${exName(k)}`, (v || []).map(s => `${s.kg != null ? s.kg + ' kg × ' : ''}${s.reps ?? '?'}${s.done ? ' ✓' : ''}`).join(', ')]); return; }
     if (pre === 'log.done') { lines.push([`Făcut · ${exName(k)}`, showVal(v)]); return; }
@@ -698,15 +699,18 @@ function viewAzi() {
     }
   }
 
-  // day basics
-  h += `<section class="card"><h2>Ziua</h2>
+  // morning check-in: everything about the night and yesterday, in one go
+  const yd = addDays(d, -1);
+  h += `<section class="card"><h2>Dimineața</h2>
     <div class="grid2">
-      <label class="f">Tipul zilei<select data-path="kind">${KINDS.map(([k, l]) => `<option value="${k}" ${day.kind === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="f">Greutate azi dimineață (kg)<input type="text" inputmode="decimal" data-path="weight" data-type="num" value="${day.weight ?? ''}" placeholder="ex. 87,6"></label>
-      <label class="f">Pași azi (totalul de seară)<input type="text" inputmode="numeric" data-path="steps" data-type="num" value="${day.steps ?? ''}" placeholder="din Google Fit"></label>
       <label class="f">Somn azi-noapte (ore)<input type="text" inputmode="decimal" data-path="sleepHours" data-type="num" value="${day.sleepHours ?? ''}" placeholder="ex. 7,5"></label>
+      <label class="f">Pași ieri, ${esc(fmtShort(yd))} (total)<input type="text" inputmode="numeric" data-path="steps" data-date="${yd}" data-type="num" value="${S.days[yd]?.steps ?? ''}" placeholder="din Google Fit"></label>
     </div>
     ${q('Cât de greu te-ai trezit azi', 'wake', day.wake ?? null, { min: 1, max: 5, hint: '1 = ușor · 5 = foarte greu' })}
+  </section>
+  <section class="card"><h2>Ziua</h2>
+    <label class="f">Tipul zilei<select data-path="kind">${KINDS.map(([k, l]) => `<option value="${k}" ${day.kind === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="done-line"><input type="checkbox" data-path="party" data-type="bool" ${day.party ? 'checked' : ''}> Party / ieșire cu băutură în seara asta</label>
   </section>`;
 
@@ -725,6 +729,7 @@ function viewAzi() {
 
   // outdoor
   if (day.kind === 'afara' || plan?.code === 'AFARĂ' || day.outdoor) h += outdoorHTML(day);
+  h += cardioHTML(day);
 
   // feedback
   if (hasBlocks || day.log) h += feedbackHTML(day);
@@ -742,9 +747,9 @@ function todayHero(d, day) {
   const plan = S.plans[d];
   const checks = [
     ['Greutate', day.weight != null],
-    ['Pași', day.steps != null],
+    ['Pași ieri', S.days[addDays(d, -1)]?.steps != null],
     ['Mese', (day.meals || []).length >= 2],
-    [plan?.blocks?.length ? 'Antrenament' : 'Mișcare', !!(day.log?.completed && day.log.completed !== 'sarit') || !!day.outdoor]
+    [plan?.blocks?.length ? 'Antrenament' : 'Mișcare', !!(day.log?.completed && day.log.completed !== 'sarit') || !!day.outdoor || !!(day.cardio || []).length]
   ];
   const done = checks.filter(c => c[1]).length;
   const C = 2 * Math.PI * 40, off = C * (1 - done / checks.length);
@@ -836,6 +841,54 @@ function outdoorHTML(day) {
   </section>`;
 }
 
+const CARDIO = [['banda', 'Bandă (mers)'], ['bicicleta', 'Bicicletă'], ['eliptica', 'Eliptică'], ['stepper', 'Stepper / scări'], ['vaslit', 'Aparat de vâslit'], ['altul', 'Altul']];
+const cardioName = t => CARDIO.find(x => x[0] === t)?.[1] || t;
+function cardioLine(c) {
+  const bits = [`${c.minutes ?? '?'} min`];
+  if (c.level != null) bits.push(`nivel ${fmtN(c.level)}`);
+  if (c.speed != null) bits.push(`${fmtN(c.speed)} km/h`);
+  if (c.incline != null) bits.push(`înclinare ${fmtN(c.incline)}%`);
+  if (c.km != null) bits.push(`${fmtN(c.km, 2)} km`);
+  if (c.kcal != null) bits.push(`${fmtN(c.kcal, 0)} kcal afișate`);
+  return `${cardioName(c.type)}: ${bits.join(' · ')}`;
+}
+function cardioHTML(day) {
+  const list = day.cardio || [];
+  return `<section class="card"><div class="row between"><h2>Cardio</h2><button class="btn sm" data-act="cardio-new">+ Adaugă cardio</button></div>
+    ${list.length ? list.map(c => `<div class="row between"><span>${esc(cardioLine(c))}${c.notes ? `<br><span class="note">${esc(c.notes)}</span>` : ''}</span>
+      <span class="row">${S.confirm === c.id
+        ? `<button class="btn sm danger" data-act="cardio-del" data-id="${c.id}">Șterge</button><button class="btn sm ghost" data-act="cancel">Nu</button>`
+        : `<button class="btn sm" data-act="cardio-edit" data-id="${c.id}">Editează</button><button class="btn sm ghost" data-act="ask-del" data-id="${c.id}">×</button>`}</span></div>`).join('')
+      : `<p class="empty">Bandă, bicicletă, eliptică… Notează ce arată aparatul: timp, nivel, kcal. Contează și pentru pași, dacă n-ai avut telefonul la tine.</p>`}
+  </section>`;
+}
+function cardioSheet(c, isNew) {
+  openSheet();
+  const p = $('#sheetPanel');
+  const v = k => c[k] ?? '';
+  p.innerHTML = `<div class="sheet-head"><h2>${isNew ? 'Cardio nou' : 'Editează cardio'}</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+    <label class="f">Aparat<select id="c-type">${CARDIO.map(([k, n]) => `<option value="${k}" ${c.type === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    <div class="grid2">
+      <label class="f">Timp (min)<input type="text" inputmode="numeric" id="c-minutes" value="${v('minutes')}"></label>
+      <label class="f">Nivel / rezistență<input type="text" inputmode="decimal" id="c-level" value="${v('level')}" placeholder="dacă are"></label>
+      <label class="f">Viteză (km/h)<input type="text" inputmode="decimal" id="c-speed" value="${v('speed')}" placeholder="la bandă"></label>
+      <label class="f">Înclinare (%)<input type="text" inputmode="decimal" id="c-incline" value="${v('incline')}" placeholder="la bandă"></label>
+      <label class="f">Distanță (km)<input type="text" inputmode="decimal" id="c-km" value="${v('km')}" placeholder="dacă arată"></label>
+      <label class="f">Kcal afișate<input type="text" inputmode="numeric" id="c-kcal" value="${v('kcal')}"></label>
+    </div>
+    <label class="f">Notițe<input type="text" id="c-notes" value="${esc(c.notes || '')}" placeholder="ex. intervale, genunchiul ok"></label>
+    <p class="note">La bandă doar mers, fără alergare. Notează și ce simte genunchiul, mai ales la înclinare.</p>
+    <div class="row"><button class="btn primary" id="c-save">Notează</button><button class="btn ghost" data-act="close">Renunță</button></div>`;
+  $('#c-save').onclick = () => {
+    const out = { id: c.id, type: $('#c-type').value, notes: $('#c-notes').value.trim() };
+    ['minutes', 'level', 'speed', 'incline', 'km', 'kcal'].forEach(k => { const n = toNum($('#c-' + k).value); if (n != null) out[k] = n; });
+    if (out.minutes == null) { toast('Trece cel puțin timpul.'); return; }
+    const list = [...(S.days[S.date]?.cardio || [])];
+    const i = list.findIndex(x => x.id === c.id);
+    if (i >= 0) list[i] = out; else list.push(out);
+    closeSheet(); saveDay(S.date, { cardio: list }); toast('Cardio notat. Îl trimiți cu butonul de jos.');
+  };
+}
 function photosHTML(ids, target) {
   const th = (ids || []).map(thumb).join('');
   const up = `<label class="btn sm"><input type="file" accept="image/*" multiple hidden data-upload="${target}">Adaugă poze sau capturi</label>`;
@@ -1153,6 +1206,9 @@ document.addEventListener('click', async e => {
   else if (a === 'day') { S.date = addDays(S.date, +b.dataset.n); S.confirm = null; render(); ensureRange(S.date, S.date); }
   else if (a === 'pull') pull();
   else if (a === 'review') reviewSheet();
+  else if (a === 'cardio-new') cardioSheet({ id: uid(), type: S.days[S.date]?.kind === 'sala' ? 'banda' : 'bicicleta' }, true);
+  else if (a === 'cardio-edit') { const c = (S.days[S.date]?.cardio || []).find(x => x.id === b.dataset.id); if (c) cardioSheet(c, false); }
+  else if (a === 'cardio-del') { const list = (S.days[S.date]?.cardio || []).filter(x => x.id !== b.dataset.id); S.confirm = null; saveDay(S.date, { cardio: list }); }
   else if (a === 'send') sendAll();
   else if (a === 'discard-ask') $('#discardRow').innerHTML = `<span class="small">Ștergi toate modificările netrimise?</span><button class="btn sm danger" data-act="discard">Da, renunță</button><button class="btn sm ghost" data-act="review">Nu</button>`;
   else if (a === 'discard') { QUEUE = []; saveQueue(); closeSheet(); toast('Modificările netrimise au fost anulate.'); pull(); }
@@ -1221,7 +1277,7 @@ $('#view').addEventListener('change', async e => {
     let v = el.type === 'checkbox' ? el.checked : el.value;
     if (el.dataset.type === 'num') v = toNum(v);
     else if (typeof v === 'string') v = v.trim();
-    await saveDay(S.date, nest(el.dataset.path, v));
+    await saveDay(el.dataset.date || S.date, nest(el.dataset.path, v));
   }
 });
 $('#view').addEventListener('input', e => {
