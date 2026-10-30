@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0C1A30">
-<title>Drumul spre Pârtie</title>
+<meta name="theme-color" content="#2E2347">
+<title>Summit Building</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -12,49 +12,53 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
-/* Layout: night-sky header band with a mountain ridge, bright snow cards below, bold summit-orange actions; one mobile column, icon tab bar at the bottom. */
+/* Layout: violet dusk header with the route's elevation profile and sunrise bands, warm snow cards below; one mobile column, icon tab bar at the bottom. */
 :root {
-  --bg: #F1F4F9;
+  --bg: #FBF8F4;
   --surface: #FFFFFF;
-  --surface-2: #E7ECF4;
-  --fg: #0D1626;
-  --muted: #5A677C;
-  --line: #D7DEE9;
-  --accent: #FF5A1F;
-  --accent-2: #FF8A3D;
+  --surface-2: #F3ECE4;
+  --fg: #2E2347;
+  --muted: #7A6E8A;
+  --line: #E8DFD5;
+  --accent: #FF6B3D;
+  --accent-2: #FFB347;
   --accent-fg: #FFFFFF;
-  --accent-soft: #FFE7DC;
-  --ice: #2B7BF0;
-  --ice-soft: #DCEAFF;
-  --night: #0C1A30;
-  --night-2: #1D3557;
-  --night-fg: #F3F7FC;
-  --night-muted: #9FB2CC;
-  --ok: #17A05D;
-  --warn: #EE9B00;
-  --bad: #E2332A;
-  --c-a: #FF5A1F; --c-b: #2B7BF0; --c-c: #17A05D; --c-d: #8A5CF6; --c-out: #0FA3B1;
-  --shadow: 0 1px 2px rgba(13, 22, 38, .06), 0 6px 18px rgba(13, 22, 38, .06);
+  --accent-soft: #FFE6DA;
+  --ice: #7A3E8F;
+  --ice-soft: #F1E8F6;
+  --night: #2E2347;
+  --night-2: #4A2F66;
+  --night-fg: #FBF8F4;
+  --night-muted: #C9B8DC;
+  --band-1: #7A3E8F; --band-2: #E2546A; --band-3: #FF7A45; --band-4: #FFB347;
+  --route: #5C4A78;
+  --ok: #1E9E6A;
+  --warn: #E89A00;
+  --bad: #D93A3A;
+  --c-a: #FF6B3D; --c-b: #E2546A; --c-c: #7A3E8F; --c-d: #E89A00; --c-out: #1B9AAA;
+  --shadow: 0 1px 2px rgba(46, 35, 71, .06), 0 6px 18px rgba(46, 35, 71, .07);
   --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius: 16px;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #08101C; --surface: #111C2D; --surface-2: #1A273C; --fg: #EAF0F8; --muted: #8F9DB3; --line: #233350;
-    --accent: #FF6B33; --accent-2: #FF9A55; --accent-fg: #FFFFFF; --accent-soft: #3B1E12; --ice: #5A9BFF; --ice-soft: #142A4D;
-    --night: #050B15; --night-2: #13253F; --night-fg: #F3F7FC; --night-muted: #8EA3C0;
-    --ok: #2CC779; --warn: #F5B02E; --bad: #F2554B;
-    --c-a: #FF6B33; --c-b: #5A9BFF; --c-c: #2CC779; --c-d: #A585FF; --c-out: #2CC4D1;
+    --bg: #140F1D; --surface: #1F1830; --surface-2: #2A2140; --fg: #F4EEF8; --muted: #A99BBB; --line: #352A4D;
+    --accent: #FF8355; --accent-2: #FFC164; --accent-fg: #FFFFFF; --accent-soft: #3D2219; --ice: #C08BD6; --ice-soft: #2C2040;
+    --night: #0E0A16; --night-2: #2A1C40; --night-fg: #FBF8F4; --night-muted: #B3A3C9;
+    --route: #4A3B63;
+    --ok: #3CCB8A; --warn: #F5B53A; --bad: #F2645A;
+    --c-a: #FF8355; --c-b: #F06D82; --c-c: #B07BD0; --c-d: #F5B53A; --c-out: #3CC1CF;
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 18px rgba(0, 0, 0, .25); color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #08101C; --surface: #111C2D; --surface-2: #1A273C; --fg: #EAF0F8; --muted: #8F9DB3; --line: #233350;
-  --accent: #FF6B33; --accent-2: #FF9A55; --accent-fg: #FFFFFF; --accent-soft: #3B1E12; --ice: #5A9BFF; --ice-soft: #142A4D;
-  --night: #050B15; --night-2: #13253F; --night-fg: #F3F7FC; --night-muted: #8EA3C0;
-  --ok: #2CC779; --warn: #F5B02E; --bad: #F2554B;
-  --c-a: #FF6B33; --c-b: #5A9BFF; --c-c: #2CC779; --c-d: #A585FF; --c-out: #2CC4D1;
+  --bg: #140F1D; --surface: #1F1830; --surface-2: #2A2140; --fg: #F4EEF8; --muted: #A99BBB; --line: #352A4D;
+  --accent: #FF8355; --accent-2: #FFC164; --accent-fg: #FFFFFF; --accent-soft: #3D2219; --ice: #C08BD6; --ice-soft: #2C2040;
+  --night: #0E0A16; --night-2: #2A1C40; --night-fg: #FBF8F4; --night-muted: #B3A3C9;
+  --route: #4A3B63;
+  --ok: #3CCB8A; --warn: #F5B53A; --bad: #F2645A;
+  --c-a: #FF8355; --c-b: #F06D82; --c-c: #B07BD0; --c-d: #F5B53A; --c-out: #3CC1CF;
   --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 18px rgba(0, 0, 0, .25); color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -75,26 +79,38 @@ button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .wrap { max-width: 680px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 
-/* header: night band + ridge */
-.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; color: var(--night-fg);
-  background: linear-gradient(160deg, var(--night) 0%, var(--night-2) 100%); overflow: hidden; }
-.top .ridge { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 46px; pointer-events: none; }
-.top .ridge .far { fill: var(--night-2); opacity: .9; }
-.top .ridge .near { fill: var(--night); opacity: .85; }
-.top .ridge .snow { fill: var(--night-fg); opacity: .22; }
-.top .wrap { position: relative; padding-block: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+/* header: dusk band, elevation profile, sunrise bands, snow ridge */
+.top { position: relative; color: var(--night-fg); background: var(--night); overflow: hidden; }
+.top .wrap { position: relative; padding-block: 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+.bands { height: 28px; display: grid; grid-template-rows: repeat(4, 1fr); }
+.bands i { display: block; }
+.bands i:nth-child(1) { background: var(--band-1); } .bands i:nth-child(2) { background: var(--band-2); }
+.bands i:nth-child(3) { background: var(--band-3); } .bands i:nth-child(4) { background: var(--band-4); }
+.ridge-wrap { height: 0; position: relative; }
+.ridge { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 28px; display: block; }
+.ridge path { fill: var(--bg); }
 .brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.brand-name { font-family: var(--font-display); font-weight: 700; font-style: italic; font-size: 24px; letter-spacing: .03em; text-transform: uppercase; line-height: 1; }
+.brand-name { font-family: var(--font-display); font-weight: 700; font-style: italic; font-size: 26px; letter-spacing: .02em; line-height: 1; }
 .brand-name span { color: var(--accent-2); }
 .brand-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.hpill { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--night-muted); border: 1px solid rgba(255, 255, 255, .16); border-radius: 999px; padding: 4px 10px; }
+.hpill { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--night-muted); border: 1px solid rgba(255, 255, 255, .18); border-radius: 999px; padding: 4px 10px; background: transparent; }
 .hpill b { color: var(--night-fg); font-family: var(--font-display); font-size: 15px; letter-spacing: 0; }
 .hpill.hot { background: var(--accent); border-color: var(--accent); color: #fff; }
 .hpill.hot b { color: #fff; }
+.alt { display: flex; flex-direction: column; gap: 2px; }
+.alt-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12px; color: var(--night-muted); }
+.alt-head b { font-family: var(--font-display); font-size: 22px; color: var(--accent-2); font-style: italic; }
+.alt svg { width: 100%; height: auto; max-height: 72px; display: block; overflow: visible; }
+.alt .route { fill: none; stroke: var(--route); stroke-width: 3; stroke-linejoin: round; }
+.alt .done { fill: none; stroke: var(--accent-2); stroke-width: 3.5; stroke-linejoin: round; stroke-linecap: round; }
+.alt .camp { fill: var(--night-muted); }
+.alt .me { fill: var(--accent-2); stroke: var(--night); stroke-width: 3; }
+.alt .peak { fill: var(--night-fg); }
 .datebar { display: flex; align-items: center; gap: 8px; }
-.datebar .dlabel { flex: 1; text-align: center; font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--night-fg); background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .14); border-radius: 12px; padding: 7px 8px; }
-.top .iconbtn { color: var(--night-fg); background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .16); }
+.datebar .dlabel { flex: 1; text-align: center; font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--night-fg); background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .16); border-radius: 12px; padding: 7px 8px; }
+.top .iconbtn { color: var(--night-fg); background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .18); }
 .iconbtn { width: 42px; height: 38px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-size: 22px; line-height: 1; }
+.gain { font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, .95); background: rgba(0, 0, 0, .14); border-radius: 999px; padding: 3px 10px; align-self: flex-start; }
 
 /* main + tabs */
 main { padding-block: 16px calc(92px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
@@ -122,7 +138,7 @@ p { margin: 0; }
 /* forms */
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
 label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--muted); font-weight: 600; min-width: 0; }
-input[type=text], input[type=time], input[type=search], input:not([type]), select, textarea {
+input[type=text], input[type=time], input[type=date], input[type=password], input[type=search], input:not([type]), select, textarea {
   width: 100%; border: 2px solid var(--line); background: var(--surface); border-radius: 12px; padding: 9px 11px; color: var(--fg); font-size: 16px; min-width: 0;
 }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; }
@@ -274,16 +290,12 @@ textarea { min-height: 70px; resize: vertical; }
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF5A1F"/><stop offset="1" stop-color="#FFB547"/></linearGradient></defs></svg>
 <header class="top">
-  <svg class="ridge" viewBox="0 0 400 46" preserveAspectRatio="none" aria-hidden="true">
-    <path class="far" d="M0 46 L0 30 L40 18 L70 26 L110 6 L150 24 L190 14 L230 28 L270 4 L310 22 L350 12 L400 26 L400 46 Z"/>
-    <path class="snow" d="M100 10 L110 6 L120 11 L113 10 Z M262 8 L270 4 L279 9 L271 8 Z"/>
-    <path class="near" d="M0 46 L0 38 L60 30 L95 36 L140 26 L185 38 L240 30 L290 40 L340 32 L400 38 L400 46 Z"/>
-  </svg>
   <div class="wrap">
     <div class="brand">
-      <span class="brand-name">Drumul spre <span>Pârtie</span></span>
+      <span class="brand-name">Summit <span>Building</span></span>
       <span class="brand-meta" id="brandMeta"></span>
     </div>
+    <div class="alt" id="altitude"></div>
     <div class="datebar" id="datebar">
       <button class="iconbtn" data-act="day" data-n="-1" aria-label="Ziua anterioară">‹</button>
       <button class="dlabel" id="dateLabel" data-act="today" aria-label="Mergi la azi"></button>
@@ -291,6 +303,8 @@ textarea { min-height: 70px; resize: vertical; }
     </div>
   </div>
 </header>
+<div class="bands" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+<div class="ridge-wrap" aria-hidden="true"><svg class="ridge" viewBox="0 0 400 28" preserveAspectRatio="none"><path d="M0 28 L0 22 L45 15 L70 19 L112 11 L150 20 L185 16 L230 22 L270 13 L312 21 L352 16 L400 23 L400 28 Z"/></svg></div>
 <main class="wrap" id="view"></main>
 <div class="sendbar" id="sendBar" hidden><div class="wrap"><button class="btn primary wide" data-act="review">Trimite notițele</button></div></div>
 <nav class="tabs" aria-label="Secțiuni">
@@ -333,7 +347,7 @@ const SRC = [['acasa', 'Acasă'], ['meniu', 'Meniul zilei'], ['glovo', 'Glovo / 
 const PREP = ['', 'crud', 'fiert', 'la grătar', 'la cuptor', 'prăjit', 'altul'];
 const OUT = [['drumetie', 'Drumeție'], ['plimbare', 'Plimbare'], ['inot', 'Înot'], ['bicicleta', 'Bicicletă'], ['altul', 'Altul']];
 
-const S = { ready: {}, sync: 'ok', tab: 'azi', date: today(), profile: null, days: {}, plans: {}, catalog: {}, msgMap: {}, favMap: {}, messages: [], favorites: [], fallback: {}, range: 30, calStart: null, confirm: null };
+const S = { index: {}, ready: {}, sync: 'ok', tab: 'azi', date: today(), profile: null, days: {}, plans: {}, catalog: {}, msgMap: {}, favMap: {}, messages: [], favorites: [], fallback: {}, range: 30, calStart: null, confirm: null };
 try { const t = localStorage.getItem('dsp-tab'); if (t) S.tab = t; } catch (e) {}
 if (/^#(azi|mancare|progres|calendar|catalog|profil)$/.test(location.hash)) S.tab = location.hash.slice(1);
 
@@ -527,11 +541,11 @@ function saveDay(date, patch) {
 function saveTo(file, key, patch) { queueOp({ file, key, patch }); return Promise.resolve(); }
 
 function cacheSave() {
-  store.set('dsp-cache', { profile: S.profile, catalog: S.catalog, favMap: S.favMap, days: S.days, plans: S.plans, msgMap: S.msgMap, months: [...loadedMonths] });
+  store.set('dsp-cache', { index: S.index, profile: S.profile, catalog: S.catalog, favMap: S.favMap, days: S.days, plans: S.plans, msgMap: S.msgMap, months: [...loadedMonths] });
 }
 function cacheLoad() {
   const c = store.get('dsp-cache', null); if (!c) return false;
-  Object.assign(S, { profile: c.profile, catalog: c.catalog || {}, favMap: c.favMap || {}, days: c.days || {}, plans: c.plans || {}, msgMap: c.msgMap || {} });
+  Object.assign(S, { index: c.index || {}, profile: c.profile, catalog: c.catalog || {}, favMap: c.favMap || {}, days: c.days || {}, plans: c.plans || {}, msgMap: c.msgMap || {} });
   derive(); S.ready.days = true; return true;
 }
 function derive() {
@@ -556,7 +570,7 @@ async function pull() {
   if (!GH.token) { render(); return; }
   S.sync = 'loading'; renderChrome();
   try {
-    const [prof, cat, fav] = await Promise.all(['config/profile.json', 'catalog.json', 'favorites.json'].map(loadJson));
+    const [prof, cat, fav, idx] = await Promise.all(['config/profile.json', 'catalog.json', 'favorites.json', 'index.json'].map(loadJson));
     const t = today();
     const months = monthsBetween(addDays(t, -40), addDays(t, 14));
     if (!months.includes(S.date.slice(0, 7))) months.push(S.date.slice(0, 7));
@@ -564,7 +578,7 @@ async function pull() {
     S.days = {}; S.plans = {}; S.msgMap = {}; loadedMonths.clear();
     try { await Promise.all(months.map(loadMonth)); }
     catch (e) { Object.assign(S, old); throw e; }
-    S.profile = prof; S.catalog = cat || {}; S.favMap = fav || {};
+    S.profile = prof; S.catalog = cat || {}; S.favMap = fav || {}; S.index = idx || {};
     QUEUE.forEach(applyLocal); derive(); cacheSave();
     S.ready.days = true; S.sync = QUEUE.length ? 'pending' : 'ok';
   } catch (e) {
@@ -662,6 +676,54 @@ function renderChrome() {
   bar.hidden = !(GH.token && QUEUE.length);
   bar.querySelector('button').textContent = sending ? 'Se trimite…' : `Trimite notițele (${n})`;
   $('#brandMeta').innerHTML = meta;
+  renderAltitude();
+}
+
+
+/* ---------- altitude: effort turned into metres on the way to the summit ---------- */
+// Same formula lives in COACH.md; the coach stores the total for past days in index.json.altitude.
+const SUMMIT = 8849;
+const ALT_RULES = { complet: 30, partial: 20, minim: 12, outdoor: 50, cardioPer2Min: 1, cardioMax: 20, fullDay: 5 };
+const CAMPS = [[1800, 'Tabăra 1'], [3600, 'Tabăra 2'], [5400, 'Tabăra 3'], [7200, 'Tabăra 4'], [SUMMIT, 'Vârful']];
+function dayMeters(day) {
+  if (!day) return 0;
+  let m = ALT_RULES[day.log?.completed] || 0;
+  if (day.outdoor && (day.outdoor.minutes || day.outdoor.km)) m += ALT_RULES.outdoor;
+  const cm = (day.cardio || []).reduce((a, c) => a + (c.minutes || 0), 0);
+  m += Math.min(ALT_RULES.cardioMax, Math.floor(cm / 2) * ALT_RULES.cardioPer2Min);
+  if (day.weight != null && (day.meals || []).length >= 2) m += ALT_RULES.fullDay;
+  return m;
+}
+function altitude() {
+  const a = S.index?.altitude || {};
+  let m = a.meters || 0;
+  const through = a.through || '0000-00-00';
+  Object.entries(S.days).forEach(([d, day]) => { if (d > through && d <= today()) m += dayMeters(day); });
+  return Math.min(SUMMIT, m);
+}
+const PROFILE = [[0, 50], [30, 44], [55, 48], [85, 36], [110, 40], [140, 28], [170, 32], [205, 22], [235, 26], [265, 16], [295, 20], [330, 10], [360, 13], [400, 3]];
+function profileY(x) {
+  for (let i = 1; i < PROFILE.length; i++) {
+    const [x0, y0] = PROFILE[i - 1], [x1, y1] = PROFILE[i];
+    if (x <= x1) return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+  }
+  return PROFILE[PROFILE.length - 1][1];
+}
+function renderAltitude() {
+  const el = $('#altitude'); if (!el) return;
+  if (!S.ready.days) { el.innerHTML = ''; return; }
+  const m = altitude(), x = 400 * m / SUMMIT;
+  const pts = PROFILE.map(p => p.join(',')).join(' ');
+  const done = PROFILE.filter(p => p[0] < x).concat([[x, profileY(x)]]).map(p => p.map(n => n.toFixed(1)).join(',')).join(' ');
+  const next = CAMPS.find(c => c[0] > m);
+  el.innerHTML = `<div class="alt-head"><span><b>${fmtN(m, 0)} m</b> din ${fmtN(SUMMIT, 0)}</span><span>${next ? `${esc(next[1])} la ${fmtN(next[0], 0)} m` : 'Ai ajuns pe vârf'}</span></div>
+    <svg viewBox="0 -6 400 62" aria-label="Profilul traseului: ${fmtN(m, 0)} metri din ${fmtN(SUMMIT, 0)}" role="img">
+      <polyline class="route" points="${pts}"/>
+      <polyline class="done" points="${done}"/>
+      ${CAMPS.slice(0, -1).map(([cm]) => { const cx = 400 * cm / SUMMIT; return `<circle class="camp" cx="${cx.toFixed(1)}" cy="${profileY(cx).toFixed(1)}" r="3"/>`; }).join('')}
+      <circle class="peak" cx="400" cy="3" r="4"/>
+      <circle class="me" cx="${x.toFixed(1)}" cy="${profileY(x).toFixed(1)}" r="6"/>
+    </svg>`;
 }
 
 /* ---------- views ---------- */
@@ -762,7 +824,7 @@ function todayHero(d, day) {
 }
 function sessionHTML(p, day, isFb) {
   const col = SESS[p.code] || 'var(--accent)';
-  let h = `<section class="card session-head" style="--sess:${col}"><span class="code" aria-hidden="true">${esc(isFb ? 'MIN' : (p.code === 'AFARĂ' ? '' : p.code || ''))}</span><div class="row between"><span class="eyebrow">${esc(p.phase || (isFb ? 'Varianta minimă' : ''))}</span>${p.durationMin ? `<span class="pill">~${p.durationMin} min</span>` : ''}</div><h2>${esc(p.title || 'Antrenament')}</h2>${p.coachNote ? `<p class="muted">${esc(p.coachNote)}</p>` : ''}</section>`;
+  let h = `<section class="card session-head" style="--sess:${col}"><span class="code" aria-hidden="true">${esc(isFb ? 'MIN' : (p.code === 'AFARĂ' ? '' : p.code || ''))}</span><div class="row between"><span class="eyebrow">${esc(p.phase || (isFb ? 'Varianta minimă' : ''))}</span>${p.durationMin ? `<span class="pill">~${p.durationMin} min</span>` : ''}</div><h2>${esc(p.title || 'Antrenament')}</h2>${isFb ? '' : `<span class="gain">+${p.code === 'AFARĂ' ? ALT_RULES.outdoor : ALT_RULES.complet} m dacă o duci la capăt</span>`}${p.coachNote ? `<p class="muted">${esc(p.coachNote)}</p>` : ''}</section>`;
   if (p.setup?.length) h += `<section class="card setup"><span class="eyebrow">Asamblează înainte de start</span><ul>${p.setup.map(s => `<li>${esc(s)}</li>`).join('')}</ul></section>`;
   if (p.notes?.length) h += `<section class="card info"><ul>${p.notes.map(s => `<li>${esc(s)}</li>`).join('')}</ul></section>`;
   (p.blocks || []).forEach(b => {

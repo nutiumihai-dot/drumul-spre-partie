@@ -1,4 +1,4 @@
-"""Draws the app icon (night sky, orange sun, two peaks with snow caps) as PNGs without external libraries."""
+"""Draws the app icon (dusk sky, sun, two peaks, sunrise bands) as PNGs without external libraries."""
 import struct
 import sys
 import zlib
@@ -22,13 +22,13 @@ def inside(poly, x, y):
 
 
 def draw(size):
-    top, bottom = (12, 26, 48), (29, 53, 87)
-    sun, far, near, snow = (255, 90, 31), (43, 74, 116), (240, 244, 250), (255, 255, 255)
-    # shapes in a 100x100 space; peaks stay inside the maskable safe zone
-    far_peak = [(10, 82), (40, 40), (62, 66), (90, 82)]
-    near_peak = [(28, 82), (58, 30), (88, 82)]
-    near_snow = [(48, 44), (58, 30), (68, 44), (62, 41), (58, 46), (54, 41)]
-    far_snow = [(34, 48), (40, 40), (46, 48), (40, 46)]
+    top, bottom = (46, 35, 71), (74, 47, 102)
+    bands = [(122, 62, 143), (226, 84, 106), (255, 122, 69), (255, 179, 71)]
+    sun, snow, peak_far = (255, 179, 71), (251, 248, 244), (92, 74, 120)
+    # 100x100 space; shapes stay inside the maskable safe zone
+    far_peak = [(8, 70), (36, 40), (56, 58), (92, 70)]
+    near_peak = [(24, 70), (56, 26), (88, 70)]
+    near_snow = [(46, 40), (56, 26), (66, 40), (61, 37), (56, 42), (51, 37)]
     rows = []
     ss = 3  # supersampling
     for py in range(size):
@@ -40,18 +40,16 @@ def draw(size):
                     x = (px + (sx + .5) / ss) * 100 / size
                     y = (py + (sy + .5) / ss) * 100 / size
                     c = lerp(top, bottom, y / 100)
-                    if (x - 30) ** 2 + (y - 32) ** 2 < 9 ** 2:
+                    if y >= 70:
+                        c = bands[min(3, int((y - 70) / 7.5))]
+                    if (x - 30) ** 2 + (y - 30) ** 2 < 8 ** 2:
                         c = sun
                     if inside(far_peak, x, y):
-                        c = far
-                    if inside(far_snow, x, y):
-                        c = (200, 214, 232)
+                        c = peak_far
                     if inside(near_peak, x, y):
-                        c = lerp(near, (196, 210, 228), (y - 30) / 52)
+                        c = lerp(snow, (226, 214, 236), (y - 26) / 44)
                     if inside(near_snow, x, y):
-                        c = snow
-                    if y > 82:
-                        c = sun if 82 < y < 86 and 22 < x < 78 else c
+                        c = (255, 255, 255)
                     for i in range(3):
                         acc[i] += c[i]
             row += bytes(round(v / ss / ss) for v in acc)

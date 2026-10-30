@@ -1,14 +1,14 @@
 {
-  "name": "Drumul spre Pârtie",
-  "short_name": "Pârtie",
+  "name": "Summit Building",
+  "short_name": "Summit",
   "description": "Jurnal de antrenament, alimentație și greutate, cu planuri adaptate genunchiului.",
   "lang": "ro",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0C1A30",
-  "theme_color": "#0C1A30",
+  "background_color": "#2E2347",
+  "theme_color": "#2E2347",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

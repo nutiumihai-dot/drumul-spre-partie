@@ -1,4 +1,4 @@
-# Drumul spre Pârtie
+# Summit Building
 
 Aplicație web instalabilă (PWA) pentru jurnal de antrenament, alimentație, greutate și pași, cu planuri generate și ajustate de un antrenor AI.
 
