@@ -619,6 +619,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
+const APP_VERSION = 'v17';
 const PHOTO_BRANCH = 'poze';
 async function commitTo(branch, build, message) {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -1838,7 +1839,7 @@ function viewProfile() {
   h += `<section class="card"><h2>Sală</h2><p class="muted">${esc(p.gym || 'Nicio sală aleasă încă. Când te hotărăști, spune-i lui Claude ce aparate are.')}</p></section>`;
   h += `<section class="card"><h2>Notificări</h2><p class="muted small">Primești o notificare pe telefon când îți scriu un mesaj. Activează-le doar pe dispozitivul pe care vrei să le primești.</p>
     ${pushOn() ? '<p class="done-status">Activate pe acest dispozitiv</p>' : '<button class="btn" data-act="push-on">Activează notificările aici</button>'}</section>`;
-  h += `<section class="card"><h2>Aplicația</h2><p class="muted small">Datele vin din repo-ul privat ${esc(GH.owner)}/${esc(GH.repo)}. ${QUEUE.length ? `${QUEUE.length} salvări așteaptă să fie trimise.` : 'Toate salvările sunt în GitHub.'}</p>
+  h += `<section class="card"><h2>Aplicația</h2><p class="muted small">Versiunea aplicației: <strong>${APP_VERSION}</strong>. Datele vin din repo-ul privat ${esc(GH.owner)}/${esc(GH.repo)}. ${QUEUE.length ? `${QUEUE.length} salvări așteaptă să fie trimise.` : 'Toate salvările sunt în GitHub.'}</p>
     <div class="row"><button class="btn primary" data-act="update-app">Actualizează aplicația și datele</button><button class="btn" data-act="manual">Antrenor fără PC</button></div>
     <details><summary class="small muted">Conexiunea GitHub</summary><div class="sec" style="margin-top:10px">${ghForm()}</div></details></section>`;
   return h + '</div>';
