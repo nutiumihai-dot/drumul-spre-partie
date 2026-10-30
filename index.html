@@ -237,6 +237,7 @@ textarea { min-height: 70px; resize: vertical; }
 .calbody select { padding: 6px 8px; font-size: 14px; }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--fg); font-weight: 700; text-align: left; font-size: 15px; }
 .status { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 2px 8px; background: var(--surface-2); text-transform: uppercase; letter-spacing: .04em; }
+.status.ev { background: var(--c-d); color: #fff; }
 .status.ok { background: var(--ok); color: #fff; } .status.skip { background: var(--bad); color: #fff; } .status.min { background: var(--warn); color: #fff; }
 
 /* catalog */
@@ -399,7 +400,7 @@ const LABELS = {
   kind: 'Tipul zilei', weight: 'Greutate dimineața', steps: 'Pași', sleepHours: 'Somn azi-noapte (ore)', wake: 'Trezire (1–5)', party: 'Party seara',
   'log.completed': 'Antrenament', 'log.skipReason': 'Motiv', 'log.rpe': 'Efort (RPE)', 'log.painDuring': 'Durere în timpul antrenamentului',
   'log.painEvening': 'Durere seara', 'log.painMorning': 'Durere a doua zi dimineață', 'log.stiffness': 'Rigiditate', 'log.energy': 'Energie',
-  'log.swelling': 'Umflare', 'log.kneeling': 'Disconfort la sprijin', 'log.notes': 'Notițe antrenament',
+  'log.swelling': 'Umflare', 'log.feel': 'Cum s-a simțit (1–5)', 'log.feelNote': 'Cum a fost', 'log.kneeling': 'Disconfort la sprijin', 'log.notes': 'Notițe antrenament',
   'outdoor.type': 'Ieșire: tip', 'outdoor.minutes': 'Ieșire: durată (min)', 'outdoor.km': 'Ieșire: distanță (km)', 'outdoor.up': 'Ieșire: urcare (m)',
   'outdoor.down': 'Ieșire: coborâre (m)', 'outdoor.kneeDown': 'Ieșire: genunchi la coborâre', 'outdoor.notes': 'Ieșire: notițe', 'outdoor.photos': 'Ieșire: poze',
   userNotes: 'Notițele tale', kinetoNotes: 'Notițe de la kineto', avoid: 'Exerciții de evitat', name: 'Nume'
@@ -418,6 +419,7 @@ function describe(patch) {
   const walk = (o, pre) => Object.entries(o).forEach(([k, v]) => {
     const p = pre ? `${pre}.${k}` : k;
     if (p === 'date') return;
+    if (p === 'events') { lines.push(['Ocazii', v.length ? v.map(eventLine).join(' · ') : 'toate șterse']); return; }
     if (p === 'cardio') { lines.push(['Cardio', v.length ? v.map(cardioLine).join(' · ') : 'tot șters']); return; }
     if (p === 'meals') { lines.push(['Mese', v.length ? v.map(m => `${MEALT.find(x => x[0] === m.type)?.[1] || m.type}${m.time ? ' ' + m.time : ''}: ${(m.items || []).map(i => i.name).join(', ') || 'poze'}`).join(' · ') : 'toate șterse']); return; }
     if (pre === 'log.sets') { lines.push([`Serii · ${exName(k)}`, (v || []).map(s => `${s.kg != null ? s.kg + ' kg × ' : ''}${s.reps ?? '?'}${s.done ? ' ✓' : ''}`).join(', ')]); return; }
@@ -605,12 +607,12 @@ function currentPhase(d = today()) {
   const ph = S.profile?.phases || [];
   return ph.find(p => p.from <= d && d <= p.to) || null;
 }
-function scale(path, val, { min = 0, max = 10, knee = false } = {}) {
+function scale(path, val, { min = 0, max = 10, knee = false, date = null } = {}) {
   const n = max - min + 1;
   let h = `<div class="scale" style="grid-template-columns:repeat(${n},1fr)">`;
   for (let i = min; i <= max; i++) {
     const on = val === i;
-    h += `<button type="button" data-act="set" data-path="${path}" data-val="${i}" aria-pressed="${on}" class="${knee ? kneeCls(i) : ''}">${i}</button>`;
+    h += `<button type="button" data-act="set" data-path="${path}" data-val="${i}"${date ? ` data-date="${date}"` : ''} aria-pressed="${on}" class="${knee ? kneeCls(i) : ''}">${i}</button>`;
   }
   return h + '</div>';
 }
@@ -693,11 +695,8 @@ function viewAzi() {
   if (d === t) {
     const m = S.messages[0];
     if (m) h += `<section class="card"><div class="row between"><span class="eyebrow">Mesaj de la Claude · ${esc(fmtShort(m.date || t))}</span><button class="linkbtn small" data-act="msgs">Toate mesajele</button></div><div class="msg"><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></div></section>`;
-    const y = addDays(d, -1), yd = S.days[y];
-    if (yd?.log && yd.log.completed !== 'sarit' && yd.log.painMorning == null) {
-      h += `<section class="card setup"><span class="eyebrow">Dimineața de după antrenamentul de ieri</span>${q('Durere la genunchi acum', 'log.painMorning', null, { knee: true, hint: '0 = deloc' }).replace(/data-path="log\.painMorning"/g, `data-path="log.painMorning" data-date="${y}"`)}</section>`;
-    }
   }
+  h += yesterdayHTML(d);
 
   // morning check-in: everything about the night and yesterday, in one go
   const yd = addDays(d, -1);
@@ -711,7 +710,8 @@ function viewAzi() {
   </section>
   <section class="card"><h2>Ziua</h2>
     <label class="f">Tipul zilei<select data-path="kind">${KINDS.map(([k, l]) => `<option value="${k}" ${day.kind === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-    <label class="done-line"><input type="checkbox" data-path="party" data-type="bool" ${day.party ? 'checked' : ''}> Party / ieșire cu băutură în seara asta</label>
+    <div class="sec"><div class="row between"><span class="qlabel">Ocazii</span><button class="btn sm" data-act="event-new">+ Adaugă ocazie</button></div>
+      ${eventsList(d) || '<p class="empty">Party, bere, date, masă în oraș, nuntă… Adaug-o din timp, chiar și pentru zilele următoare, ca să ajustez planul în jurul ei.</p>'}</div>
   </section>`;
 
   // workout
@@ -839,6 +839,62 @@ function outdoorHTML(day) {
     <label class="f">Notițe<textarea data-path="outdoor.notes">${esc(o.notes || '')}</textarea></label>
     ${photosHTML(o.photos, 'outdoor')}
   </section>`;
+}
+
+/* ---------- yesterday review & occasions ---------- */
+function yesterdayHTML(d) {
+  const y = addDays(d, -1), yd = S.days[y] || {}, plan = S.plans[y], l = yd.log || {};
+  const trained = plan?.blocks?.length || plan?.code === 'AFARĂ' || yd.log || yd.outdoor || (yd.cardio || []).length;
+  if (!trained) return '';
+  const opts = [['complet', 'Da, tot'], ['partial', 'Parțial'], ['minim', 'Varianta minimă'], ['sarit', 'Nu']];
+  const chip = (path, val, label, cur) => `<button class="chip" data-act="set" data-path="${path}" data-val="${esc(val)}" data-str="1" data-date="${y}" aria-pressed="${cur === val}">${esc(label)}</button>`;
+  let h = `<section class="card setup"><span class="eyebrow">Ieri · ${esc(fmtDate(y))}${plan?.title ? ' · ' + esc(plan.title) : ''}</span>
+    <div class="sec"><span class="qlabel">M-am ținut de antrenament?</span><div class="chips">${opts.map(([k, n]) => chip('log.completed', k, n, l.completed)).join('')}</div></div>`;
+  if (l.completed === 'sarit') {
+    h += `<div class="sec"><span class="qlabel">Ce te-a oprit?</span><div class="chips">${SKIP.map(s => chip('log.skipReason', s, s, l.skipReason)).join('')}</div></div>`;
+  } else {
+    h += q('Cum s-a simțit', 'log.feel', l.feel ?? null, { min: 1, max: 5, hint: '1 = foarte greu · 5 = excelent', date: y });
+    h += q('Genunchiul azi dimineață', 'log.painMorning', l.painMorning ?? null, { knee: true, hint: '0 = deloc', date: y });
+  }
+  h += `<label class="f">Pe scurt, cum a fost<input type="text" data-path="log.feelNote" data-date="${y}" value="${esc(l.feelNote || '')}" placeholder="ex. greu la final, umerii obosiți, genunchiul ok"></label></section>`;
+  return h;
+}
+const EVENTS = [['party', 'Party'], ['bere', 'Ieșire la bere'], ['date', 'Date'], ['masa', 'Ieșire la masă'], ['nunta', 'Nuntă / botez'], ['altul', 'Altă ocazie']];
+const eventName = t => EVENTS.find(x => x[0] === t)?.[1] || t;
+const eventLine = e => `${eventName(e.type)}${e.time ? ' · ' + e.time : ''}${e.notes ? ' · ' + e.notes : ''}`;
+function eventsList(date) {
+  const list = S.days[date]?.events || [];
+  return list.map(e => `<div class="row between"><span><strong>${esc(eventName(e.type))}</strong>${e.time ? ` · ${esc(e.time)}` : ''}${e.notes ? `<br><span class="note">${esc(e.notes)}</span>` : ''}</span>
+    <span class="row">${S.confirm === e.id
+      ? `<button class="btn sm danger" data-act="event-del" data-date="${date}" data-id="${e.id}">Șterge</button><button class="btn sm ghost" data-act="cancel">Nu</button>`
+      : `<button class="btn sm" data-act="event-edit" data-date="${date}" data-id="${e.id}">Editează</button><button class="btn sm ghost" data-act="ask-del" data-id="${e.id}">×</button>`}</span></div>`).join('');
+}
+function eventSheet(ev, fromDate) {
+  openSheet();
+  const p = $('#sheetPanel');
+  p.innerHTML = `<div class="sheet-head"><h2>${fromDate ? 'Editează ocazia' : 'Ocazie nouă'}</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+    <div class="sec"><span class="qlabel">Ce fel de ocazie</span><div class="chips" id="e-types">${EVENTS.map(([k, n]) => `<button type="button" class="chip" data-type="${k}" aria-pressed="${ev.type === k}">${n}</button>`).join('')}</div></div>
+    <div class="grid2">
+      <label class="f">Data<input type="date" id="e-date" value="${esc(ev.date)}"></label>
+      <label class="f">Ora (aprox.)<input type="time" id="e-time" value="${esc(ev.time || '')}"></label>
+    </div>
+    <label class="f">Detalii<input type="text" id="e-notes" value="${esc(ev.notes || '')}" placeholder="ex. o să beau, terminăm târziu, restaurant italian"></label>
+    <p class="note">Ajustez zilele din jurul ocaziei: mesele de dinainte, antrenamentul și ieșirea afară de după.</p>
+    <div class="row"><button class="btn primary" id="e-save">Notează</button><button class="btn ghost" data-act="close">Renunță</button></div>`;
+  let type = ev.type;
+  $$('#e-types .chip', p).forEach(b => b.onclick = () => { type = b.dataset.type; $$('#e-types .chip', p).forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  $('#e-save').onclick = () => {
+    const date = $('#e-date').value;
+    if (!type) { toast('Alege ce fel de ocazie e.'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast('Alege data.'); return; }
+    const out = { id: ev.id, type, time: $('#e-time').value, notes: $('#e-notes').value.trim() };
+    if (fromDate && fromDate !== date) saveDay(fromDate, { events: (S.days[fromDate]?.events || []).filter(x => x.id !== ev.id) });
+    const list = [...(S.days[date]?.events || [])];
+    const i = list.findIndex(x => x.id === ev.id);
+    if (i >= 0) list[i] = out; else list.push(out);
+    closeSheet(); saveDay(date, { events: list }); ensureRange(date, date);
+    toast('Ocazie notată. O trimiți cu butonul de jos.');
+  };
 }
 
 const CARDIO = [['banda', 'Bandă (mers)'], ['bicicleta', 'Bicicletă'], ['eliptica', 'Eliptică'], ['stepper', 'Stepper / scări'], ['vaslit', 'Aparat de vâslit'], ['altul', 'Altul']];
@@ -1079,7 +1135,7 @@ function mondayOf(s) { const d = parse(s); const k = (d.getDay() + 6) % 7; retur
 function viewCalendar() {
   const t = today();
   const start = S.calStart || mondayOf(t);
-  let h = `<div class="row between"><button class="btn sm" data-act="cal" data-n="-7">‹ Săpt. anterioară</button><button class="btn sm" data-act="cal" data-n="7">Săpt. următoare ›</button></div>`;
+  let h = `<div class="row between"><button class="btn sm" data-act="cal" data-n="-7">‹ Săpt. anterioară</button><button class="btn sm primary" data-act="event-new">+ Ocazie</button><button class="btn sm" data-act="cal" data-n="7">Săpt. următoare ›</button></div>`;
   for (let w = 0; w < 2; w++) {
     const ws = addDays(start, w * 7);
     h += `<section class="card"><h3>Săptămâna ${fmtShort(ws)} – ${fmtShort(addDays(ws, 6))}</h3><div class="cal">`;
@@ -1088,7 +1144,7 @@ function viewCalendar() {
       const c = day.log?.completed;
       const st = c === 'complet' || c === 'partial' ? `<span class="status ok">${c === 'complet' ? 'Făcut' : 'Parțial'}</span>` : c === 'minim' ? `<span class="status min">Minim</span>` : c === 'sarit' ? `<span class="status skip">Sărit</span>` : '';
       h += `<div class="calday ${d === t ? 'today' : ''}"><div class="dn" style="--sess:${p ? SESS[p.code] || 'var(--accent)' : 'transparent'}"><small>${ZS[dt.getDay()]}</small>${dt.getDate()}</div><div class="calbody">
-        <div class="row">${p ? `<button class="linkbtn" data-act="goto" data-date="${d}">${esc(p.title)}</button>` : `<span class="muted small">fără plan</span>`}${st}${day.party ? '<span class="status">party</span>' : ''}</div>
+        <div class="row">${p ? `<button class="linkbtn" data-act="goto" data-date="${d}">${esc(p.title)}</button>` : `<span class="muted small">fără plan</span>`}${st}${day.party ? '<span class="status">party</span>' : ''}${(day.events || []).map(e => `<span class="status ev">${esc(eventName(e.type))}${e.time ? ' ' + esc(e.time) : ''}</span>`).join('')}</div>
         <select data-cal="${d}" aria-label="Tipul zilei ${fmtShort(d)}">${KINDS.map(([k, l]) => `<option value="${k}" ${day.kind === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
       </div></div>`;
     }
@@ -1206,6 +1262,9 @@ document.addEventListener('click', async e => {
   else if (a === 'day') { S.date = addDays(S.date, +b.dataset.n); S.confirm = null; render(); ensureRange(S.date, S.date); }
   else if (a === 'pull') pull();
   else if (a === 'review') reviewSheet();
+  else if (a === 'event-new') eventSheet({ id: uid(), date: S.tab === 'calendar' ? today() : S.date }, null);
+  else if (a === 'event-edit') { const e = (S.days[b.dataset.date]?.events || []).find(x => x.id === b.dataset.id); if (e) eventSheet({ ...e, date: b.dataset.date }, b.dataset.date); }
+  else if (a === 'event-del') { const dt = b.dataset.date; S.confirm = null; saveDay(dt, { events: (S.days[dt]?.events || []).filter(x => x.id !== b.dataset.id) }); }
   else if (a === 'cardio-new') cardioSheet({ id: uid(), type: S.days[S.date]?.kind === 'sala' ? 'banda' : 'bicicleta' }, true);
   else if (a === 'cardio-edit') { const c = (S.days[S.date]?.cardio || []).find(x => x.id === b.dataset.id); if (c) cardioSheet(c, false); }
   else if (a === 'cardio-del') { const list = (S.days[S.date]?.cardio || []).filter(x => x.id !== b.dataset.id); S.confirm = null; saveDay(S.date, { cardio: list }); }
