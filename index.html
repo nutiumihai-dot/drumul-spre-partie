@@ -395,6 +395,7 @@ const AVAIL = [
   ['acasa', 'Disponibil acasă', 'Antrenament cu echipamentul de acasă.'],
   ['sala', 'Disponibil la sală', 'Sesiune pentru sală.'],
   ['afara', 'Drumeție', 'Zi de drumeție sau ieșire lungă afară; fără picioare în ziua dinainte.'],
+  ['inot', 'Bazin / înot', 'Mergi la bazin; ajustez antrenamentul din ziua respectivă și din jur.'],
   ['calatorie', 'Excursie / călătorie', 'Plecat: sesiune scurtă doar cu ce iei cu tine.'],
   ['indisponibil', 'Indisponibil', 'Nu pun nimic; mut sesiunea în altă zi.'],
   ['kineto', 'Kineto', 'Fără forță, cel mult mobilitate ușoară.']
@@ -1111,13 +1112,13 @@ function viewAzi() {
   if (canLog(d)) {
     if (useFb && plan?.blocks?.length) h += `<button class="btn ghost" data-act="fallback">Înapoi la antrenamentul planificat</button>`;
     else if (!useFb && S.profile?.fallback && !day.log?.completed) h += `<button class="btn" data-act="fallback">${plan?.blocks?.length ? 'Nu am timp sau chef azi: varianta minimă (15–20 min)' : 'Fă varianta minimă (15–20 min)'}</button>`;
-    if (day.kind === 'afara' || plan?.code === 'AFARĂ' || day.outdoor) h += outdoorHTML(day);
+    if (day.kind === 'afara' || day.kind === 'inot' || plan?.code === 'AFARĂ' || plan?.code === 'ÎNOT' || day.outdoor) h += outdoorHTML(day);
     h += cardioHTML(day);
   }
   return h + '</div></div>';
 }
 
-const SESS = { A: 'var(--c-a)', B: 'var(--c-b)', C: 'var(--c-c)', D: 'var(--c-d)', 'AFARĂ': 'var(--c-out)' };
+const SESS = { A: 'var(--c-a)', B: 'var(--c-b)', C: 'var(--c-c)', D: 'var(--c-d)', 'AFARĂ': 'var(--c-out)', 'ÎNOT': 'var(--c-out)' };
 function loggedSomething(day) { return !!day && (day.weight != null || day.steps != null || (day.meals || []).length || day.log?.completed || day.outdoor); }
 function streak() {
   let d = today(); if (!loggedSomething(S.days[d])) d = addDays(d, -1);
@@ -1276,9 +1277,10 @@ function changesSheet(session) {
 
 function outdoorHTML(day) {
   const o = day.outdoor || {};
-  return `<section class="card"><h2>Ieșire afară</h2>
+  const cur = o.type || (day.kind === 'inot' ? 'inot' : 'drumetie');
+  return `<section class="card"><h2>${cur === 'inot' ? 'Bazin' : 'Ieșire afară'}</h2>
     <div class="grid2">
-      <label class="f">Tip<select data-path="outdoor.type">${OUT.map(([k, n]) => `<option value="${k}" ${o.type === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <label class="f">Tip<select data-path="outdoor.type">${OUT.map(([k, n]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <label class="f">Durată (min)<input type="text" inputmode="numeric" data-path="outdoor.minutes" data-type="num" value="${o.minutes ?? ''}"></label>
       <label class="f">Distanță (km)<input type="text" inputmode="decimal" data-path="outdoor.km" data-type="num" value="${o.km ?? ''}"></label>
       <label class="f">Urcare (m)<input type="text" inputmode="numeric" data-path="outdoor.up" data-type="num" value="${o.up ?? ''}"></label>
