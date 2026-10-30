@@ -799,6 +799,7 @@ async function buildPack() {
   for (let i = -1; i <= 7; i++) { const d = addDays(t, i); if (S.plans[d]) plans[d] = S.plans[d]; }
   for (let i = 1; i <= 21; i++) { const d = addDays(t, i); if (S.days[d]?.events?.length) events[d] = S.days[d].events; }
   const recentMsgs = S.messages.slice(0, 3).map(m => `${m.date} · ${m.title}: ${m.body}`).join('\n');
+  const openReqs = S.requests.filter(r => r.status !== 'rezolvat').map(r => `[${r.id}] ${r.date}: ${r.text}`).join('\n');
   const catalog = Object.entries(S.catalog).map(([id, c]) => `${id}: ${c.name}`).join('\n');
   const now = new Date();
   return `Ești antrenorul lui Mihai din aplicația Summit Building. Laptopul lui e închis, așa că faci acum, manual, ce face verificarea automată: procesezi ce e nou (mese fără "est", antrenamente și evaluări ale zilei de ieri, ieșiri, cardio, ocazii) după regulile din COACH.md de mai jos.
@@ -812,7 +813,8 @@ Răspunde în română: întâi feedback-ul pentru Mihai, scurt (3–6 rânduri)
  "coach": {"AAAA-LL-ZZ": {"kcal": 0, "protein": 0, "foodNote": "1–2 propoziții"}},
  "plans": {"AAAA-LL-ZZ": {"sesiune completă, în același format ca planurile de mai jos": "..."}},
  "index": {"doar câmpurile din index.json pe care le schimbi, inclusiv altitude": "..."},
- "journal": "- 1–3 rânduri cu ce ai observat și decis"
+ "journal": "- 1–3 rânduri cu ce ai observat și decis",
+ "requests_done": ["id-urile cererilor lui la care ai răspuns"]
 }
 Reguli: nu schimba nimic din ce a scris Mihai; în meals_est folosești doar id-urile meselor de mai jos; în plans dai sesiunea completă (sau null ca s-o ștergi) și respecți toate regulile din COACH.md (discuri, un singur schimb, genunchi); exercițiile folosesc id-urile din catalog. Dacă ai nevoie să vezi poza unei mese, roagă-l să o atașeze aici.
 
@@ -837,6 +839,9 @@ ${JSON.stringify(plans, null, 1)}
 ===== Ocazii în următoarele 3 săptămâni =====
 ${JSON.stringify(events, null, 1)}
 
+===== Cererile lui deschise (răspunde-le în mesaj și pune id-urile în requests_done) =====
+${openReqs || '(niciuna)'}
+
 ===== Ultimele tale mesaje (nu le repeta) =====
 ${recentMsgs || '(niciunul)'}
 
@@ -853,7 +858,7 @@ function parseCoachAnswer(text) {
   let j;
   try { j = JSON.parse(raw); } catch (e) { throw new Error('Nu găsesc un bloc JSON valid. Copiază tot răspunsul, inclusiv blocul de la final.'); }
   if (!isObj(j)) throw new Error('Blocul JSON trebuie să fie un obiect.');
-  const allowed = ['messages', 'meals_est', 'coach', 'plans', 'index', 'journal'];
+  const allowed = ['messages', 'meals_est', 'coach', 'plans', 'index', 'journal', 'requests_done'];
   const extra = Object.keys(j).filter(k => !allowed.includes(k));
   if (extra.length) throw new Error(`Răspunsul conține câmpuri neacceptate: ${extra.join(', ')}.`);
   const ops = [], preview = [];
@@ -897,6 +902,11 @@ function parseCoachAnswer(text) {
     ops.push({ file: 'coach/jurnal.md', journal: j.journal.slice(0, 2000), date: today() });
     preview.push(['Jurnalul antrenorului', j.journal.split('\n')[0].slice(0, 80)]);
   }
+  (Array.isArray(j.requests_done) ? j.requests_done : []).forEach(id => {
+    const r = S.reqMap[id]; if (!r) return;
+    ops.push({ file: `requests/${(r.date || today()).slice(0, 7)}.json`, key: id, patch: { status: 'rezolvat' } });
+    preview.push(['Cerere rezolvată', r.text.slice(0, 60)]);
+  });
   if (!ops.length) throw new Error('Răspunsul nu conține nimic de aplicat.');
   return { ops, preview };
 }
