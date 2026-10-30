@@ -285,6 +285,39 @@ textarea { min-height: 70px; resize: vertical; }
   .scale button, .chip, .btn { transition: transform .12s ease, background-color .12s ease; }
   .btn:active, .chip:active, .scale button:active { transform: scale(.96); }
 }
+
+/* workout logging */
+.changed { font-size: 13px; font-weight: 600; color: var(--warn); margin: 0; }
+.done-status { font-weight: 700; color: var(--ok); margin: 0; }
+details.more summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--muted); padding: 4px 0; }
+details.more[open] summary { margin-bottom: 8px; }
+.ch-row { box-shadow: none; border: 1px solid var(--line); gap: 8px; }
+
+/* views: one column on phones; columns, side rail and wide header on desktop */
+.v, .col-a, .col-b, .charts, .weeks { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (min-width: 1000px) {
+  body { padding-left: 96px; }
+  .wrap { max-width: 1240px; }
+  .tabs { top: 0; right: auto; width: 96px; border-top: 0; border-right: 1px solid var(--line); box-shadow: none; padding-bottom: 0; }
+  .tabs .wrap { grid-template-columns: 1fr; grid-auto-rows: min-content; gap: 6px; padding: 18px 8px; max-width: none; }
+  .tabs button { padding: 10px 0; font-size: 12px; }
+  .top .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 40px; row-gap: 8px; align-items: end; padding-block: 18px 14px; }
+  .top .brand { grid-column: 1 / -1; }
+  .top .datebar { grid-column: 2; }
+  main { padding-block: 24px 40px; }
+  body:has(#sendBar:not([hidden])) main { padding-bottom: 110px; }
+  .sendbar { left: 96px; bottom: 12px; }
+  .sendbar .wrap { max-width: 520px; }
+  .toast { bottom: 24px; left: calc(50% + 48px); }
+  .v-azi, .v-mancare { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 22px; align-items: start; }
+  .tiles { grid-template-columns: repeat(4, 1fr); }
+  .charts, .weeks { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+  .masonry { display: block; column-count: 2; column-gap: 22px; }
+  .masonry > * { break-inside: avoid; margin-bottom: 22px; }
+  .sheet { align-items: center; }
+  .sheet-panel { border-radius: 22px; max-height: 88%; max-width: 720px; }
+}
+@media (min-width: 1500px) { .masonry { column-count: 3; } }
 </style>
 </head>
 <body>
@@ -438,6 +471,8 @@ function describe(patch) {
     if (p === 'meals') { lines.push(['Mese', v.length ? v.map(m => `${MEALT.find(x => x[0] === m.type)?.[1] || m.type}${m.time ? ' ' + m.time : ''}: ${(m.items || []).map(i => i.name).join(', ') || 'poze'}`).join(' · ') : 'toate șterse']); return; }
     if (pre === 'log.sets') { lines.push([`Serii · ${exName(k)}`, (v || []).map(s => `${s.kg != null ? s.kg + ' kg × ' : ''}${s.reps ?? '?'}${s.done ? ' ✓' : ''}`).join(', ')]); return; }
     if (pre === 'log.done') { lines.push([`Făcut · ${exName(k)}`, showVal(v)]); return; }
+    if (pre === 'log.changes') { lines.push([exName(k), v ? changeLine(v) : 'ca în plan']); return; }
+    if (p === 'log.changes' && v == null) return;
     if (p === 'outdoor.photos') { lines.push([LABELS[p], `${(v || []).length}`]); return; }
     if (isObj(v)) { walk(v, p); return; }
     let val = showVal(v);
@@ -957,14 +992,14 @@ function ghForm() {
 
 function viewAzi() {
   const d = S.date, day = S.days[d] || {}, t = today();
-  let h = '';
+  let h = '<div class="v v-azi"><div class="col-a">';
 
   h += todayHero(d, day);
   if (d === t) {
     const m = S.messages[0];
     if (m) h += `<section class="card"><div class="row between"><span class="eyebrow">Mesaj de la Claude · ${esc(fmtShort(m.date || t))}</span><button class="linkbtn small" data-act="msgs">Toate mesajele</button></div><div class="msg"><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></div><button class="linkbtn small" data-act="manual">Laptopul e închis? Antrenor fără PC</button></section>`;
+    h += yesterdayHTML(d);
   }
-  h += yesterdayHTML(d);
 
   // morning check-in: everything about the night and yesterday, in one go
   const yd = addDays(d, -1);
@@ -980,7 +1015,7 @@ function viewAzi() {
     <label class="f">Tipul zilei<select data-path="kind">${KINDS.map(([k, l]) => `<option value="${k}" ${day.kind === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <div class="sec"><div class="row between"><span class="qlabel">Ocazii</span><button class="btn sm" data-act="event-new">+ Adaugă ocazie</button></div>
       ${eventsList(d) || '<p class="empty">Party, bere, date, masă în oraș, nuntă… Adaug-o din timp, chiar și pentru zilele următoare, ca să ajustez planul în jurul ei.</p>'}</div>
-  </section>`;
+  </section></div><div class="col-b">`;
 
   // workout
   const plan = S.plans[d];
@@ -992,16 +1027,14 @@ function viewAzi() {
   } else {
     h += `<section class="card flat"><h2>Niciun antrenament planificat</h2><p class="muted">${plan?.notes ? '' : 'Planul pentru ziua asta apare după generarea săptămânii.'}</p></section>`;
   }
-  if (useFb && plan?.blocks?.length) h += `<button class="btn ghost" data-act="fallback">Înapoi la antrenamentul planificat</button>`;
-  else if (!useFb && S.profile?.fallback) h += `<button class="btn" data-act="fallback">${plan?.blocks?.length ? 'Nu am timp sau chef azi: varianta minimă (15–20 min)' : 'Fă varianta minimă (15–20 min)'}</button>`;
-
-  // outdoor
-  if (day.kind === 'afara' || plan?.code === 'AFARĂ' || day.outdoor) h += outdoorHTML(day);
-  h += cardioHTML(day);
-
-  // feedback
-  if (hasBlocks || day.log) h += feedbackHTML(day);
-  return h;
+  if (hasBlocks || day.log) h += doneHTML(day, session, useFb, d);
+  if (canLog(d)) {
+    if (useFb && plan?.blocks?.length) h += `<button class="btn ghost" data-act="fallback">Înapoi la antrenamentul planificat</button>`;
+    else if (!useFb && S.profile?.fallback && !day.log?.completed) h += `<button class="btn" data-act="fallback">${plan?.blocks?.length ? 'Nu am timp sau chef azi: varianta minimă (15–20 min)' : 'Fă varianta minimă (15–20 min)'}</button>`;
+    if (day.kind === 'afara' || plan?.code === 'AFARĂ' || day.outdoor) h += outdoorHTML(day);
+    h += cardioHTML(day);
+  }
+  return h + '</div></div>';
 }
 
 const SESS = { A: 'var(--c-a)', B: 'var(--c-b)', C: 'var(--c-c)', D: 'var(--c-d)', 'AFARĂ': 'var(--c-out)' };
@@ -1052,45 +1085,113 @@ function itemHTML(it, day) {
   if (it.load) pills.push(`<span class="pill load">${esc(it.load)}</span>`);
   if (it.tempo) pills.push(`tempo ${esc(it.tempo)}`);
   if (it.rest) pills.push(`pauză ${esc(it.rest)}`);
-  let h = `<div class="ex" data-exwrap="${esc(it.ex)}"><button class="ex-name" data-act="ex" data-ex="${esc(it.ex)}">${esc(name)}</button>
+  const ch = day.log?.changes?.[it.ex];
+  let h = `<div class="ex"><button class="ex-name" data-act="ex" data-ex="${esc(it.ex)}">${esc(name)}</button>
     <div class="ex-meta">${pills.map(p => p.startsWith('<span') ? p : `<span class="pill">${p}</span>`).join('')}</div>
-    ${it.note ? `<p class="note">${esc(it.note)}</p>` : ''}`;
-  if (it.sets) {
-    const logged = day.log?.sets?.[it.ex] || [];
-    const hasKg = it.kg != null;
-    for (let i = 0; i < it.sets; i++) {
-      const s = logged[i] || {};
-      h += `<div class="setrow ${hasKg ? '' : 'nokg'}"><span class="sn">S${i + 1}</span>
-        ${hasKg ? `<input type="text" inputmode="decimal" aria-label="kg seria ${i + 1}" data-set="${esc(it.ex)}" data-i="${i}" data-f="kg" value="${s.kg ?? ''}" placeholder="${it.kg} kg">` : ''}
-        <input type="text" inputmode="numeric" aria-label="repetări seria ${i + 1}" data-set="${esc(it.ex)}" data-i="${i}" data-f="reps" value="${s.reps ?? ''}" placeholder="${esc(String(it.reps || 'rep').split(/[–-]/).pop())} rep">
-        <span class="chk"><input type="checkbox" aria-label="seria ${i + 1} făcută" data-set="${esc(it.ex)}" data-i="${i}" data-f="done" ${s.done ? 'checked' : ''}></span></div>`;
-    }
-  } else {
-    const done = day.log?.done?.[it.ex];
-    h += `<label class="done-line"><input type="checkbox" data-path="log.done.${esc(it.ex)}" data-type="bool" ${done ? 'checked' : ''}> Făcut</label>`;
-  }
+    ${it.note ? `<p class="note">${esc(it.note)}</p>` : ''}
+    ${ch ? `<p class="changed">${esc(changeLine(ch))}</p>` : ''}`;
   return h + `</div>`;
 }
 
-function feedbackHTML(day) {
+/* ---------- logging a workout: one tap when it went as planned, details only for what changed ---------- */
+const CH_STATUS = [['plan', 'Ca în plan'], ['usor', 'Mai ușor'], ['putine', 'Mai puține rep.'], ['sarit', 'Sărit']];
+const CH_FLAGS = [['ciudat', 'Se simte ciudat'], ['executie', 'Nu cred că îl fac corect'], ['durere', 'Mă doare ceva']];
+function changeLine(c) {
+  const bits = [];
+  if (c.status === 'usor') bits.push(`mai ușor${c.kg != null ? ': ' + fmtN(c.kg) + ' kg' : ''}`);
+  if (c.status === 'putine') bits.push(`mai puține repetări${c.reps ? ': ' + c.reps : ''}`);
+  if (c.status === 'sarit') bits.push('sărit');
+  (c.flags || []).forEach(f => bits.push(CH_FLAGS.find(x => x[0] === f)?.[1].toLowerCase() || f));
+  if (c.note) bits.push(c.note);
+  return bits.join(' · ');
+}
+const canLog = d => d === today() || d === addDays(today(), -1);
+function sessionExercises(session) {
+  const out = [];
+  (session?.blocks || []).forEach(b => (b.items || []).forEach(it => { if (!out.some(x => x.ex === it.ex)) out.push(it); }));
+  return out;
+}
+function doneHTML(day, session, isFb, d) {
   const l = day.log || {};
-  const done = [['complet', 'Complet'], ['partial', 'Parțial'], ['minim', 'Varianta minimă'], ['sarit', 'Sărit']];
+  if (!canLog(d)) return `<section class="card flat"><p class="empty">${d > today() ? 'Antrenamentul îl bifezi în ziua lui sau a doua zi.' : 'Antrenamentele se bifează doar azi sau ieri.'}</p></section>`;
+  const nCh = Object.keys(l.changes || {}).length;
+  const status = l.completed === 'sarit' ? `Nu l-ai făcut${l.skipReason ? ' · ' + l.skipReason : ''}`
+    : l.completed === 'minim' ? 'Ai făcut varianta minimă'
+    : l.completed ? (nCh ? `Făcut, cu ${nCh} ${nCh === 1 ? 'modificare' : 'modificări'}${l.completed === 'partial' ? ' (parțial)' : ''}` : 'Făcut complet, ca în plan') : '';
   let h = `<section class="card"><h2>Cum a mers</h2>
-    <div class="chips">${done.map(([k, n]) => `<button class="chip" data-act="set" data-path="log.completed" data-val="${k}" data-str="1" aria-pressed="${l.completed === k}">${n}</button>`).join('')}</div>`;
+    ${status ? `<p class="done-status">${esc(status)}</p>` : ''}
+    <div class="row">
+      <button class="btn primary" data-act="done-all">${isFb ? 'Am făcut varianta minimă' : 'Am făcut tot, ca în plan'}</button>
+      ${isFb ? '' : '<button class="btn" data-act="changes">Cu modificări sau parțial</button>'}
+      <button class="btn ghost" data-act="skip">Nu l-am făcut</button>
+    </div>`;
   if (l.completed === 'sarit') {
-    h += `<div class="sec"><span class="qlabel">De ce?</span><div class="chips">${SKIP.map(s => `<button class="chip" data-act="set" data-path="log.skipReason" data-val="${esc(s)}" data-str="1" aria-pressed="${l.skipReason === s}">${s}</button>`).join('')}</div></div>`;
-  } else {
-    h += q('Efort perceput (RPE)', 'log.rpe', l.rpe ?? null, { min: 1, max: 10, hint: '10 = maxim' });
-    h += q('Durere la genunchi în timpul antrenamentului', 'log.painDuring', l.painDuring ?? null, { knee: true });
-    h += q('Durere la genunchi seara', 'log.painEvening', l.painEvening ?? null, { knee: true });
-    h += q('Durere a doua zi dimineață', 'log.painMorning', l.painMorning ?? null, { knee: true });
-    h += q('Rigiditate', 'log.stiffness', l.stiffness ?? null, {});
-    h += q('Energie', 'log.energy', l.energy ?? null, { min: 1, max: 5, hint: '1 = zero · 5 = plin' });
-    h += `<label class="done-line"><input type="checkbox" data-path="log.swelling" data-type="bool" ${l.swelling ? 'checked' : ''}> Genunchiul s-a umflat</label>
-      <label class="f">Disconfort la sprijin sau la un exercițiu anume<input type="text" data-path="log.kneeling" value="${esc(l.kneeling || '')}" placeholder="ex. pe genunchi la planșă"></label>`;
+    h += `<div class="sec"><span class="qlabel">Ce te-a oprit?</span><div class="chips">${SKIP.map(s => `<button class="chip" data-act="set" data-path="log.skipReason" data-val="${esc(s)}" data-str="1" aria-pressed="${l.skipReason === s}">${s}</button>`).join('')}</div></div>`;
+  } else if (l.completed) {
+    h += q('Genunchiul în timpul antrenamentului', 'log.painDuring', l.painDuring ?? null, { knee: true, hint: '0 = deloc' });
+    h += `<details class="more"><summary>Mai multe detalii (opțional)</summary><div class="sec">
+      ${q('Efort perceput (RPE)', 'log.rpe', l.rpe ?? null, { min: 1, max: 10, hint: '10 = maxim' })}
+      ${q('Genunchiul seara', 'log.painEvening', l.painEvening ?? null, { knee: true })}
+      ${q('Energie', 'log.energy', l.energy ?? null, { min: 1, max: 5, hint: '1 = zero · 5 = plin' })}
+      <label class="done-line"><input type="checkbox" data-path="log.swelling" data-type="bool" ${l.swelling ? 'checked' : ''}> Genunchiul s-a umflat</label>
+      <label class="f">Notițe<textarea data-path="log.notes" placeholder="orice merită știut">${esc(l.notes || '')}</textarea></label>
+    </div></details>`;
   }
-  h += `<label class="f">Notițe<textarea data-path="log.notes" placeholder="orice merită știut">${esc(l.notes || '')}</textarea></label></section>`;
-  return h;
+  return h + `</section>`;
+}
+function changesSheet(session) {
+  const d = S.date, prev = S.days[d]?.log?.changes || {};
+  const exs = sessionExercises(session);
+  const st = Object.fromEntries(exs.map(it => [it.ex, { status: 'plan', flags: [], note: '', ...(prev[it.ex] || {}) }]));
+  openSheet();
+  const p = $('#sheetPanel');
+  const draw = () => {
+    p.innerHTML = `<div class="sheet-head"><h2>Ce a fost altfel</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+      <p class="muted small">Atinge doar exercițiile care n-au mers ca în plan. Restul rămân „ca în plan”.</p>
+      ${exs.map(it => { const s = st[it.ex]; const name = it.name || S.catalog[it.ex]?.name || it.ex; return `<section class="card ch-row" data-ex="${esc(it.ex)}">
+        <div class="row between"><strong>${esc(name)}</strong><span class="muted small">${esc(it.sets ? `${it.sets} × ${it.reps}` : it.dose || '')}${it.load ? ' · ' + esc(it.load) : ''}</span></div>
+        <div class="chips">${CH_STATUS.map(([k, n]) => `<button type="button" class="chip" data-st="${k}" aria-pressed="${s.status === k}">${n}</button>`).join('')}</div>
+        ${s.status === 'usor' ? `<label class="f">Cu ce greutate (kg)<input type="text" inputmode="decimal" data-k="kg" value="${s.kg ?? ''}" placeholder="${it.kg ?? ''}"></label>` : ''}
+        ${s.status === 'putine' ? `<label class="f">Câte repetări (pe serie)<input type="text" data-k="reps" value="${esc(s.reps || '')}" placeholder="ex. 8, 8, 6"></label>` : ''}
+        ${s.status !== 'plan' || s.flags.length || s.note || s.open ? `<div class="chips">${CH_FLAGS.map(([k, n]) => `<button type="button" class="chip" data-fl="${k}" aria-pressed="${s.flags.includes(k)}">${n}</button>`).join('')}</div>
+        <label class="f">Notiță<input type="text" data-k="note" value="${esc(s.note || '')}" placeholder="ex. mă trage umărul stâng"></label>`
+        : `<button type="button" class="linkbtn small" data-fl="open">+ Notiță sau senzație ciudată</button>`}
+      </section>`; }).join('')}
+      <div class="row"><button class="btn primary" id="ch-save">Notează</button><button class="btn ghost" data-act="close">Renunță</button></div>`;
+    $$('.ch-row', p).forEach(row => {
+      const s = st[row.dataset.ex];
+      $$('[data-st]', row).forEach(b => b.onclick = () => { collect(); s.status = b.dataset.st; draw(); });
+      $$('[data-fl]', row).forEach(b => b.onclick = () => {
+        collect();
+        if (b.dataset.fl === 'open') s.open = true;
+        else s.flags = s.flags.includes(b.dataset.fl) ? s.flags.filter(x => x !== b.dataset.fl) : [...s.flags, b.dataset.fl];
+        draw();
+      });
+    });
+    $('#ch-save').onclick = () => {
+      collect();
+      const changes = {};
+      Object.entries(st).forEach(([ex, s]) => {
+        if (s.status === 'plan' && !s.flags.length && !s.note) return;
+        const c = { status: s.status };
+        if (s.status === 'usor' && s.kg != null) c.kg = s.kg;
+        if (s.status === 'putine' && s.reps) c.reps = s.reps;
+        if (s.flags.length) c.flags = s.flags;
+        if (s.note) c.note = s.note;
+        changes[ex] = c;
+      });
+      const anySkipped = Object.values(changes).some(c => c.status === 'sarit');
+      closeSheet();
+      saveDay(d, { log: { completed: anySkipped ? 'partial' : 'complet', changes: null } });
+      saveDay(d, { log: { changes } });
+      toast('Notat. Trimiți cu butonul de jos.');
+    };
+  };
+  const collect = () => $$('.ch-row', p).forEach(row => {
+    const s = st[row.dataset.ex];
+    $$('[data-k]', row).forEach(i => { s[i.dataset.k] = i.dataset.k === 'kg' ? toNum(i.value) : i.value.trim(); });
+  });
+  draw();
 }
 
 function outdoorHTML(day) {
@@ -1225,7 +1326,7 @@ function viewFood() {
   const kcal = dayKcal(day), prot = dayProtein(day);
   const kHi = tg.kcal?.[1] || 2050, pLo = tg.protein?.[0] || 150;
   const meals = [...(day.meals || [])].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-  let h = `<section class="card"><div class="row between"><h2>Total zi</h2><span class="muted small">ținta ${fmtN(tg.kcal?.[0], 0)}–${fmtN(kHi, 0)} kcal · ${fmtN(pLo, 0)}+ g proteine</span></div>
+  let h = `<div class="v v-mancare"><div class="col-a"><section class="card"><div class="row between"><h2>Total zi</h2><span class="muted small">ținta ${fmtN(tg.kcal?.[0], 0)}–${fmtN(kHi, 0)} kcal · ${fmtN(pLo, 0)}+ g proteine</span></div>
     <div class="totals">
       <div class="meter"><span class="eyebrow">Calorii</span><span class="v">${kcal == null ? '–' : fmtN(kcal, 0)}</span><div class="bar"><span style="width:${Math.min(100, (kcal || 0) / kHi * 100)}%"></span></div></div>
       <div class="meter p"><span class="eyebrow">Proteine (g)</span><span class="v">${prot == null ? '–' : fmtN(prot, 0)}</span><div class="bar"><span style="width:${Math.min(100, (prot || 0) / pLo * 100)}%"></span></div></div>
@@ -1233,7 +1334,7 @@ function viewFood() {
     ${kcal == null && meals.length ? `<p class="muted small">Estimarea apare după procesarea de seară (21:30).</p>` : ''}
     ${day.coach?.foodNote ? `<div class="msg"><p class="pre">${esc(day.coach.foodNote)}</p></div>` : ''}
   </section>
-  <div class="row"><button class="btn primary" data-act="meal-new">+ Adaugă masă</button><button class="btn" data-act="meal-fav">Din favorite</button></div>`;
+  <div class="row"><button class="btn primary" data-act="meal-new">+ Adaugă masă</button><button class="btn" data-act="meal-fav">Din favorite</button></div></div><div class="col-b">`;
   if (!meals.length) h += `<section class="card flat"><p class="empty">Nicio masă notată în ziua asta. Scrie ce ai mâncat și cam cât; caloriile le estimează Claude.</p></section>`;
   else {
     h += `<section class="card">`;
@@ -1253,7 +1354,7 @@ function viewFood() {
     });
     h += `</section>`;
   }
-  return h;
+  return h + '</div></div>';
 }
 
 function mealSheet(meal, isNew) {
@@ -1388,14 +1489,14 @@ function viewProgress() {
     <div class="tile" style="--tile:var(--ice)"><span class="eyebrow">Pași, medie 7 zile</span><span class="v">${fmtN(avg(last7.map(d => D(d).steps ?? null)), 0)}</span><span class="muted small">${tg.steps ? `ținta ${fmtN(tg.steps, 0)}` : 'săptămâna de măsurare'}</span></div>
     <div class="tile" style="--tile:var(--ok)"><span class="eyebrow">Antrenamente, 7 zile</span><span class="v">${workouts}</span><span class="muted small">inclusiv varianta minimă</span></div>
   </div>
-  <section class="card"><h2>Greutate</h2><div class="legend"><span><i style="background:var(--muted);border-radius:50%"></i>cântărire</span><span><i style="background:var(--accent)"></i>medie 7 zile</span></div>
+  <div class="charts"><section class="card"><h2>Greutate</h2><div class="legend"><span><i style="background:var(--muted);border-radius:50%"></i>cântărire</span><span><i style="background:var(--accent)"></i>medie 7 zile</span></div>
     ${svgChart({ dates, label: 'Greutate', dec: 1, series: [{ type: 'dots', values: w, r: 3 }, { type: 'line', values: wAvg }] })}</section>
   <section class="card"><h2>Calorii estimate</h2><div class="legend"><span><i style="background:var(--accent)"></i>kcal pe zi</span><span><i style="background:var(--accent-soft)"></i>intervalul țintă</span></div>
     ${svgChart({ dates, label: 'Calorii', yMin: 0, band: tg.kcal, series: [{ type: 'bars', values: kcal }] })}</section>
   <section class="card"><h2>Pași</h2>${svgChart({ dates, label: 'Pași', yMin: 0, series: [{ type: 'bars', values: steps, cls: 'bar-ice' }] })}</section>
   <section class="card"><h2>Genunchi</h2><div class="legend"><span><i style="background:var(--ok)"></i>0–3</span><span><i style="background:var(--warn)"></i>4–5</span><span><i style="background:var(--bad)"></i>peste 5</span></div>
     ${svgChart({ dates, label: 'Durere maximă genunchi', yMin: 0, yMax: 10, h: 150, series: [{ type: 'dots', values: pain, r: 4.5, clsFn: v => v <= 3 ? 'd-ok' : v <= 5 ? 'd-warn' : 'd-bad' }] })}
-    <p class="muted small">Cea mai mare valoare notată în ziua antrenamentului: în timpul lui, seara sau a doua zi dimineață.</p></section>`;
+    <p class="muted small">Cea mai mare valoare notată în ziua antrenamentului: în timpul lui, seara sau a doua zi dimineață.</p></section></div>`;
 }
 
 /* ---------- calendar ---------- */
@@ -1404,6 +1505,7 @@ function viewCalendar() {
   const t = today();
   const start = S.calStart || mondayOf(t);
   let h = `<div class="row between"><button class="btn sm" data-act="cal" data-n="-7">‹ Săpt. anterioară</button><button class="btn sm primary" data-act="event-new">+ Ocazie</button><button class="btn sm" data-act="cal" data-n="7">Săpt. următoare ›</button></div>`;
+  h += '<div class="weeks">';
   for (let w = 0; w < 2; w++) {
     const ws = addDays(start, w * 7);
     h += `<section class="card"><h3>Săptămâna ${fmtShort(ws)} – ${fmtShort(addDays(ws, 6))}</h3><div class="cal">`;
@@ -1418,6 +1520,7 @@ function viewCalendar() {
     }
     h += `</div></section>`;
   }
+  h += '</div>';
   h += `<p class="muted small">Marchează din timp zilele de afară, kineto sau indisponibile; programul săptămânii se generează după ele.</p>`;
   return h;
 }
@@ -1427,11 +1530,11 @@ function viewCatalog() {
   const items = Object.entries(S.catalog).map(([id, c]) => ({ id, ...c })).sort((a, b) => (a.group || '').localeCompare(b.group || '') || a.name.localeCompare(b.name));
   if (!items.length) return `<section class="card flat"><p class="empty">Catalogul se completează automat: fiecare exercițiu nou din plan primește o fișă.</p></section>`;
   const groups = {}; items.forEach(i => (groups[i.group || 'Altele'] ||= []).push(i));
-  let h = `<input type="search" id="catSearch" placeholder="Caută exercițiu (${items.length} în catalog)" aria-label="Caută exercițiu">`;
+  let h = `<input type="search" id="catSearch" placeholder="Caută exercițiu (${items.length} în catalog)" aria-label="Caută exercițiu"><div class="masonry">`;
   Object.entries(groups).forEach(([g, list]) => {
     h += `<section class="card" data-catgroup><h3>${esc(g)}</h3><div>${list.map(i => `<button class="cat-item" data-act="ex" data-ex="${esc(i.id)}" data-name="${esc((i.name + ' ' + (i.equipment || '')).toLowerCase())}"><span>${esc(i.name)}</span><span class="muted small">${esc(i.equipment || '')}</span></button>`).join('')}</div></section>`;
   });
-  return h;
+  return h + '</div>';
 }
 function exSheet(id) {
   const c = S.catalog[id];
@@ -1458,7 +1561,7 @@ function viewProfile() {
   if (!p) return `<section class="card flat"><p class="empty">Profilul nu s-a încărcat încă.</p></section><section class="card"><h2>Conexiunea GitHub</h2>${ghForm()}</section>`;
   const t = today();
   const tg = p.targets || {};
-  let h = `<section class="card"><h2>Obiective</h2><dl class="kv">
+  let h = `<div class="masonry"><section class="card"><h2>Obiective</h2><dl class="kv">
     <dt>Start</dt><dd>${fmtN(p.startWeight)} kg · ${p.heightCm} cm · ${p.age} ani · ${p.startDate ? fmtShort(p.startDate) : ''}</dd>
     <dt>Calorii</dt><dd>${fmtN(tg.kcal?.[0], 0)}–${fmtN(tg.kcal?.[1], 0)} kcal/zi</dd>
     <dt>Proteine</dt><dd>${fmtN(tg.protein?.[0], 0)}–${fmtN(tg.protein?.[1], 0)} g/zi</dd>
@@ -1480,7 +1583,7 @@ function viewProfile() {
   h += `<section class="card"><h2>Aplicația</h2><p class="muted small">Datele vin din repo-ul privat ${esc(GH.owner)}/${esc(GH.repo)}. ${QUEUE.length ? `${QUEUE.length} salvări așteaptă să fie trimise.` : 'Toate salvările sunt în GitHub.'}</p>
     <div class="row"><button class="btn primary" data-act="update-app">Actualizează aplicația și datele</button><button class="btn" data-act="manual">Antrenor fără PC</button></div>
     <details><summary class="small muted">Conexiunea GitHub</summary><div class="sec" style="margin-top:10px">${ghForm()}</div></details></section>`;
-  return h;
+  return h + '</div>';
 }
 
 function msgSheet() {
@@ -1530,6 +1633,13 @@ document.addEventListener('click', async e => {
   else if (a === 'day') { S.date = addDays(S.date, +b.dataset.n); S.confirm = null; render(); ensureRange(S.date, S.date); }
   else if (a === 'pull') pull();
   else if (a === 'review') reviewSheet();
+  else if (a === 'done-all' && canLog(S.date)) {
+    const fb = S.fallback[S.date] || S.days[S.date]?.log?.completed === 'minim';
+    saveDay(S.date, { log: { completed: fb ? 'minim' : 'complet', changes: null, skipReason: null } });
+    toast('Bravo! Notat. Trimiți cu butonul de jos.');
+  }
+  else if (a === 'skip' && canLog(S.date)) saveDay(S.date, { log: { completed: 'sarit', changes: null } });
+  else if (a === 'changes' && canLog(S.date)) changesSheet(S.plans[S.date]);
   else if (a === 'manual') manualSheet();
   else if (a === 'pack-build') {
     b.disabled = true; $('#packInfo').textContent = 'Descarc datele din GitHub…';
