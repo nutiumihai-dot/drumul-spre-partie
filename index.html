@@ -286,6 +286,13 @@ textarea { min-height: 70px; resize: vertical; }
   .btn:active, .chip:active, .scale button:active { transform: scale(.96); }
 }
 
+/* availability */
+.avail { align-self: flex-start; border: 2px dashed var(--line); background: transparent; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--muted); text-align: left; }
+.avail.set { border-style: solid; border-color: var(--ice); background: var(--ice-soft); color: var(--ice); }
+.avail-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+.avail-opt { display: flex; flex-direction: column; gap: 2px; text-align: left; border: 2px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; }
+.avail-opt span { font-size: 12px; color: var(--muted); }
+.avail-opt[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
 /* workout logging */
 .changed { font-size: 13px; font-weight: 600; color: var(--warn); margin: 0; }
 .done-status { font-weight: 700; color: var(--ok); margin: 0; }
@@ -382,7 +389,64 @@ const fmtN = (v, dec = 1) => v == null || isNaN(v) ? '–' : Number(v).toLocaleS
 const uid = () => 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const kneeCls = v => v == null ? '' : v <= 3 ? 's-ok' : v <= 5 ? 's-warn' : 's-bad';
 
-const KINDS = [['', '— nesetat —'], ['acasa', 'Antrenament acasă'], ['sala', 'Sală'], ['afara', 'Afară (drumeție, înot…)'], ['kineto', 'Kineto'], ['odihna', 'Odihnă'], ['indisponibil', 'Indisponibil']];
+// Availability: what the coach may plan on a day. Only exceptions need marking; empty = normal week.
+const AVAIL = [
+  ['', 'Normal', 'Planifici tu, după programul obișnuit.'],
+  ['acasa', 'Disponibil acasă', 'Antrenament cu echipamentul de acasă.'],
+  ['sala', 'Disponibil la sală', 'Sesiune pentru sală.'],
+  ['afara', 'Drumeție', 'Zi de drumeție sau ieșire lungă afară; fără picioare în ziua dinainte.'],
+  ['calatorie', 'Excursie / călătorie', 'Plecat: sesiune scurtă doar cu ce iei cu tine.'],
+  ['indisponibil', 'Indisponibil', 'Nu pun nimic; mut sesiunea în altă zi.'],
+  ['kineto', 'Kineto', 'Fără forță, cel mult mobilitate ușoară.']
+];
+const KINDS = [...AVAIL.map(([k, l]) => [k, l]), ['odihna', 'Odihnă']];
+const GEAR = [['trx', 'TRX'], ['benzi', 'Benzi elastice'], ['mini', 'Banda gri'], ['corzi', 'Corzi elastice'], ['saculeti', 'Săculeți']];
+const gearNames = g => (g || []).map(x => GEAR.find(y => y[0] === x)?.[1] || x).join(', ');
+function availLabel(day) {
+  const base = KINDS.find(k => k[0] === (day?.kind || ''))?.[1] || 'Normal';
+  return base + (day?.gear?.length ? ` · ${gearNames(day.gear)}` : '');
+}
+function availHTML(d) {
+  const day = S.days[d] || {};
+  if (d < today()) return day.kind ? `<span class="muted small">${esc(availLabel(day))}</span>` : '';
+  return `<button class="avail ${day.kind ? 'set' : ''}" data-act="avail" data-date="${d}">${esc(availLabel(day))}${day.availNote ? ` · ${esc(day.availNote)}` : ''}</button>`;
+}
+function availSheet(date) {
+  const day = S.days[date] || {};
+  let kind = day.kind && AVAIL.some(a => a[0] === day.kind) ? day.kind : '';
+  let gear = [...(day.gear || [])];
+  openSheet();
+  const p = $('#sheetPanel');
+  const draw = () => {
+    const needsGear = kind === 'calatorie' || kind === 'afara';
+    p.innerHTML = `<div class="sheet-head"><div><span class="eyebrow">${esc(fmtDate(date))}</span><h2>Disponibilitate</h2></div><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+      <p class="muted small">Marchează doar excepțiile. Le folosesc la planul săptămânii și la ajustarea zilelor dinainte și de după.</p>
+      <div class="avail-opts">${AVAIL.map(([k, n, h]) => `<button type="button" class="avail-opt" data-k="${k}" aria-pressed="${kind === k}"><strong>${n}</strong><span>${h}</span></button>`).join('')}
+        <button type="button" class="avail-opt" data-k="__ocazie"><strong>Ocazie</strong><span>Party, bere, date, masă în oraș, nuntă… cu detalii separate.</span></button></div>
+      ${needsGear ? `<div class="sec"><span class="qlabel">Ce iei cu tine</span><div class="chips">${GEAR.map(([k, n]) => `<button type="button" class="chip" data-g="${k}" aria-pressed="${gear.includes(k)}">${n}</button>`).join('')}</div><p class="note">Fără nimic bifat: doar exerciții cu greutatea corpului.</p></div>` : ''}
+      <div class="grid2">
+        <label class="f">Până la (inclusiv)<input type="date" id="av-until" value="${date}" min="${date}"></label>
+        <label class="f">Detalii<input type="text" id="av-note" value="${esc(day.availNote || '')}" placeholder="ex. hotel cu sală, plec seara"></label>
+      </div>
+      <div class="row"><button class="btn primary" id="av-save">Notează</button><button class="btn ghost" data-act="close">Renunță</button></div>`;
+    $$('[data-k]', p).forEach(b => b.onclick = () => {
+      if (b.dataset.k === '__ocazie') { eventSheet({ id: uid(), date }, null); return; }
+      kind = b.dataset.k; draw();
+    });
+    $$('[data-g]', p).forEach(b => b.onclick = () => { gear = gear.includes(b.dataset.g) ? gear.filter(x => x !== b.dataset.g) : [...gear, b.dataset.g]; draw(); });
+    $('#av-save').onclick = () => {
+      const until = $('#av-until').value || date;
+      if (until < date) { toast('Data de final e înaintea celei de început.'); return; }
+      const note = $('#av-note').value.trim();
+      const needs = kind === 'calatorie' || kind === 'afara';
+      let d = date, n = 0;
+      while (d <= until && n < 31) { saveDay(d, { kind, gear: needs ? gear : null, availNote: note || null }); d = addDays(d, 1); n++; }
+      closeSheet(); ensureRange(date, until);
+      toast(n > 1 ? `Notat pentru ${n} zile. Trimiți cu butonul de jos.` : 'Notat. Trimiți cu butonul de jos.');
+    };
+  };
+  draw();
+}
 const SKIP = ['Obosit', 'Ocupat', 'Durere genunchi', 'Fără chef', 'Plecat', 'După party', 'Bolnav', 'Altul'];
 const MEALT = [['mic-dejun', 'Mic dejun'], ['pranz', 'Prânz'], ['cina', 'Cină'], ['gustare', 'Gustare']];
 const SRC = [['acasa', 'Acasă'], ['meniu', 'Meniul zilei'], ['glovo', 'Glovo / livrare'], ['restaurant', 'Restaurant']];
@@ -453,7 +517,7 @@ function queueOp(op) {
 
 /* What changed, in words, for the review sheet and the commit message */
 const LABELS = {
-  kind: 'Tipul zilei', weight: 'Greutate dimineața', steps: 'Pași', sleepHours: 'Somn azi-noapte (ore)', wake: 'Trezire (1–5)', party: 'Party seara',
+  kind: 'Disponibilitate', availNote: 'Detalii disponibilitate', weight: 'Greutate dimineața', steps: 'Pași', sleepHours: 'Somn azi-noapte (ore)', wake: 'Trezire (1–5)', party: 'Party seara',
   'log.completed': 'Antrenament', 'log.skipReason': 'Motiv', 'log.rpe': 'Efort (RPE)', 'log.painDuring': 'Durere în timpul antrenamentului',
   'log.painEvening': 'Durere seara', 'log.painMorning': 'Durere a doua zi dimineață', 'log.stiffness': 'Rigiditate', 'log.energy': 'Energie',
   'log.swelling': 'Umflare', 'log.feel': 'Cum s-a simțit (1–5)', 'log.feelNote': 'Cum a fost', 'log.kneeling': 'Disconfort la sprijin', 'log.notes': 'Notițe antrenament',
@@ -477,6 +541,7 @@ function describe(patch) {
     if (p === 'date') return;
     if (p === 'events') { lines.push(['Ocazii', v.length ? v.map(eventLine).join(' · ') : 'toate șterse']); return; }
     if (p === 'cardio') { lines.push(['Cardio', v.length ? v.map(cardioLine).join(' · ') : 'tot șters']); return; }
+    if (p === 'gear') { lines.push(['Echipament luat', v?.length ? gearNames(v) : 'nimic']); return; }
     if (p === 'meals') { lines.push(['Mese', v.length ? v.map(m => `${MEALT.find(x => x[0] === m.type)?.[1] || m.type}${m.time ? ' ' + m.time : ''}: ${(m.items || []).map(i => i.name).join(', ') || 'poze'}`).join(' · ') : 'toate șterse']); return; }
     if (pre === 'log.sets') { lines.push([`Serii · ${exName(k)}`, (v || []).map(s => `${s.kg != null ? s.kg + ' kg × ' : ''}${s.reps ?? '?'}${s.done ? ' ✓' : ''}`).join(', ')]); return; }
     if (pre === 'log.done') { lines.push([`Făcut · ${exName(k)}`, showVal(v)]); return; }
@@ -485,7 +550,7 @@ function describe(patch) {
     if (p === 'outdoor.photos') { lines.push([LABELS[p], `${(v || []).length}`]); return; }
     if (isObj(v)) { walk(v, p); return; }
     let val = showVal(v);
-    if (p === 'kind') val = KINDN[v] || val;
+    if (p === 'kind') val = KINDN[v] || (v ? val : 'Normal');
     if (p === 'log.completed') val = COMPLETED[v] || val;
     if (p === 'outdoor.type') val = OUT.find(x => x[0] === v)?.[1] || val;
     lines.push([LABELS[p] || p, val]);
@@ -1027,7 +1092,7 @@ function viewAzi() {
     ${q('Cât de greu te-ai trezit azi', 'wake', day.wake ?? null, { min: 1, max: 5, hint: '1 = ușor · 5 = foarte greu' })}
   </section>
   <section class="card"><h2>Ziua</h2>
-    <label class="f">Tipul zilei<select data-path="kind">${KINDS.map(([k, l]) => `<option value="${k}" ${day.kind === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <div class="sec"><span class="qlabel">Disponibilitate</span>${availHTML(d) || `<span class="muted small">${esc(availLabel(day))}</span>`}</div>
     <div class="sec"><div class="row between"><span class="qlabel">Ocazii</span><button class="btn sm" data-act="event-new">+ Adaugă ocazie</button></div>
       ${eventsList(d) || '<p class="empty">Party, bere, date, masă în oraș, nuntă… Adaug-o din timp, chiar și pentru zilele următoare, ca să ajustez planul în jurul ei.</p>'}</div>
   </section></div><div class="col-b">`;
@@ -1572,13 +1637,13 @@ function viewCalendar() {
       const st = c === 'complet' || c === 'partial' ? `<span class="status ok">${c === 'complet' ? 'Făcut' : 'Parțial'}</span>` : c === 'minim' ? `<span class="status min">Minim</span>` : c === 'sarit' ? `<span class="status skip">Sărit</span>` : '';
       h += `<div class="calday ${d === t ? 'today' : ''}"><div class="dn" style="--sess:${p ? SESS[p.code] || 'var(--accent)' : 'transparent'}"><small>${ZS[dt.getDay()]}</small>${dt.getDate()}</div><div class="calbody">
         <div class="row">${p ? `<button class="linkbtn" data-act="goto" data-date="${d}">${esc(p.title)}</button>` : `<span class="muted small">fără plan</span>`}${st}${day.party ? '<span class="status">party</span>' : ''}${(day.events || []).map(e => `<span class="status ev">${esc(eventName(e.type))}${e.time ? ' ' + esc(e.time) : ''}</span>`).join('')}</div>
-        <select data-cal="${d}" aria-label="Tipul zilei ${fmtShort(d)}">${KINDS.map(([k, l]) => `<option value="${k}" ${day.kind === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        ${availHTML(d)}
       </div></div>`;
     }
     h += `</div></section>`;
   }
   h += '</div>';
-  h += `<p class="muted small">Marchează din timp zilele de afară, kineto sau indisponibile; programul săptămânii se generează după ele.</p>`;
+  h += `<p class="muted small">Atinge disponibilitatea unei zile ca s-o schimbi. Marchează doar excepțiile (sală, drumeție, călătorie, indisponibil, kineto); duminică seara planific săptămâna după ele, iar schimbările din cursul săptămânii le preiau la următoarea verificare.</p>`;
   return h;
 }
 
@@ -1690,6 +1755,7 @@ document.addEventListener('click', async e => {
   else if (a === 'day') { S.date = addDays(S.date, +b.dataset.n); S.confirm = null; render(); ensureRange(S.date, S.date); }
   else if (a === 'pull') pull();
   else if (a === 'review') reviewSheet();
+  else if (a === 'avail') availSheet(b.dataset.date);
   else if (a === 'quick-item') quickItem(b.dataset.id);
   else if (a === 'done-all' && canLog(S.date)) {
     const fb = S.fallback[S.date] || S.days[S.date]?.log?.completed === 'minim';
