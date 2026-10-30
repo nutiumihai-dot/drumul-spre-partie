@@ -295,6 +295,7 @@ textarea { min-height: 70px; resize: vertical; }
 .avail-opt[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
 /* workout logging */
 .changed { font-size: 13px; font-weight: 600; color: var(--warn); margin: 0; }
+.rejected { font-size: 13px; font-weight: 600; color: var(--bad); margin: 0; }
 .done-status { font-weight: 700; color: var(--ok); margin: 0; }
 details.more summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--muted); padding: 4px 0; }
 details.more[open] summary { margin-bottom: 8px; }
@@ -390,22 +391,22 @@ const uid = () => 'm' + Date.now().toString(36) + Math.random().toString(36).sli
 const kneeCls = v => v == null ? '' : v <= 3 ? 's-ok' : v <= 5 ? 's-warn' : 's-bad';
 
 // Availability: what the coach may plan on a day. Only exceptions need marking; empty = normal week.
+// Unmarked days count as "available at home": the coach may plan there, or leave a rest day.
 const AVAIL = [
-  ['', 'Normal', 'Planifici tu, după programul obișnuit.'],
-  ['acasa', 'Disponibil acasă', 'Antrenament cu echipamentul de acasă.'],
-  ['sala', 'Disponibil la sală', 'Sesiune pentru sală.'],
-  ['afara', 'Drumeție', 'Zi de drumeție sau ieșire lungă afară; fără picioare în ziua dinainte.'],
-  ['inot', 'Bazin / înot', 'Mergi la bazin; ajustez antrenamentul din ziua respectivă și din jur.'],
-  ['clasa', 'Clasă programată', 'Participi la o clasă (functional, spinning, yoga…); e antrenamentul zilei.'],
-  ['calatorie', 'Excursie / călătorie', 'Plecat: sesiune scurtă doar cu ce iei cu tine.'],
-  ['indisponibil', 'Indisponibil', 'Nu pun nimic; mut sesiunea în altă zi.'],
+  ['', 'Disponibil acasă', 'Pot programa ceva acasă; poate ieși și zi liberă.'],
+  ['sala', 'Disponibil la sală', 'Pot programa un antrenament la sală.'],
+  ['afara', 'Drumeție', 'A doua zi pun automat odihnă activă (la nevoie două zile).'],
+  ['inot', 'Bazin / înot', 'Ajustez antrenamentul din ziua respectivă și din jur.'],
+  ['clasa', 'Clasă programată', 'Clasa e antrenamentul zilei (functional, spinning, yoga…).'],
+  ['calatorie', 'Concediu / călătorie', 'Un minim cu ce iei cu tine; după întoarcere, o zi doar cu plimbare.'],
+  ['indisponibil', 'Indisponibil', 'Nu planific nimic în ziua asta.'],
   ['kineto', 'Kineto', 'Fără forță, cel mult mobilitate ușoară.']
 ];
-const KINDS = [...AVAIL.map(([k, l]) => [k, l]), ['odihna', 'Odihnă']];
+const KINDS = [...AVAIL.map(([k, l]) => [k, l]), ['acasa', 'Disponibil acasă'], ['odihna', 'Odihnă']];
 const GEAR = [['trx', 'TRX'], ['benzi', 'Benzi elastice'], ['mini', 'Banda gri'], ['corzi', 'Corzi elastice'], ['saculeti', 'Săculeți']];
 const gearNames = g => (g || []).map(x => GEAR.find(y => y[0] === x)?.[1] || x).join(', ');
 function availLabel(day) {
-  const base = day?.kind === 'clasa' && day.classInfo?.name ? `Clasă: ${day.classInfo.name}${day.classInfo.time ? ' ' + day.classInfo.time : ''}` : KINDS.find(k => k[0] === (day?.kind || ''))?.[1] || 'Normal';
+  const base = day?.kind === 'clasa' && day.classInfo?.name ? `Clasă: ${day.classInfo.name}${day.classInfo.time ? ' ' + day.classInfo.time : ''}` : KINDS.find(k => k[0] === (day?.kind || ''))?.[1] || 'Disponibil acasă';
   return base + (day?.gear?.length ? ` · ${gearNames(day.gear)}` : '');
 }
 function availHTML(d) {
@@ -415,14 +416,14 @@ function availHTML(d) {
 }
 function availSheet(date) {
   const day = S.days[date] || {};
-  let kind = day.kind && AVAIL.some(a => a[0] === day.kind) ? day.kind : '';
+  let kind = day.kind && day.kind !== 'acasa' && AVAIL.some(a => a[0] === day.kind) ? day.kind : '';
   let gear = [...(day.gear || [])];
   openSheet();
   const p = $('#sheetPanel');
   const draw = () => {
     const needsGear = kind === 'calatorie' || kind === 'afara';
     p.innerHTML = `<div class="sheet-head"><div><span class="eyebrow">${esc(fmtDate(date))}</span><h2>Disponibilitate</h2></div><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
-      <p class="muted small">Marchează doar excepțiile. Le folosesc la planul săptămânii și la ajustarea zilelor dinainte și de după.</p>
+      <p class="muted small">Implicit ești disponibil acasă. Marchează doar ce e altfel; le folosesc la planul săptămânii și la zilele dinainte și de după.</p>
       <div class="avail-opts">${AVAIL.map(([k, n, h]) => `<button type="button" class="avail-opt" data-k="${k}" aria-pressed="${kind === k}"><strong>${n}</strong><span>${h}</span></button>`).join('')}
         <button type="button" class="avail-opt" data-k="__ocazie"><strong>Ocazie</strong><span>Party, bere, date, masă în oraș, nuntă… cu detalii separate.</span></button></div>
       ${needsGear ? `<div class="sec"><span class="qlabel">Ce iei cu tine</span><div class="chips">${GEAR.map(([k, n]) => `<button type="button" class="chip" data-g="${k}" aria-pressed="${gear.includes(k)}">${n}</button>`).join('')}</div><p class="note">Fără nimic bifat: doar exerciții cu greutatea corpului.</p></div>` : ''}
@@ -551,12 +552,13 @@ function describe(patch) {
     if (p === 'meals') { lines.push(['Mese', v.length ? v.map(m => `${MEALT.find(x => x[0] === m.type)?.[1] || m.type}${m.time ? ' ' + m.time : ''}: ${(m.items || []).map(i => i.name).join(', ') || 'poze'}`).join(' · ') : 'toate șterse']); return; }
     if (pre === 'log.sets') { lines.push([`Serii · ${exName(k)}`, (v || []).map(s => `${s.kg != null ? s.kg + ' kg × ' : ''}${s.reps ?? '?'}${s.done ? ' ✓' : ''}`).join(', ')]); return; }
     if (pre === 'log.done') { lines.push([`Făcut · ${exName(k)}`, showVal(v)]); return; }
+    if (pre === 'rejects') { lines.push([`Respins · ${exName(k)}`, v ? rejectLine(v) : 'anulat']); return; }
     if (pre === 'log.changes') { lines.push([exName(k), v ? changeLine(v) : 'ca în plan']); return; }
     if (p === 'log.changes' && v == null) return;
     if (p === 'outdoor.photos') { lines.push([LABELS[p], `${(v || []).length}`]); return; }
     if (isObj(v)) { walk(v, p); return; }
     let val = showVal(v);
-    if (p === 'kind') val = KINDN[v] || (v ? val : 'Normal');
+    if (p === 'kind') val = KINDN[v] || (v ? val : 'Disponibil acasă');
     if (p === 'log.completed') val = COMPLETED[v] || val;
     if (p === 'outdoor.type') val = OUT.find(x => x[0] === v)?.[1] || val;
     lines.push([LABELS[p] || p, val]);
@@ -1126,7 +1128,7 @@ function viewAzi() {
   return h + '</div></div>';
 }
 
-const SESS = { A: 'var(--c-a)', B: 'var(--c-b)', C: 'var(--c-c)', D: 'var(--c-d)', FB: 'var(--c-c)', CIR: 'var(--c-a)', REACT: 'var(--c-out)', 'AFARĂ': 'var(--c-out)', 'ÎNOT': 'var(--c-out)', 'CLASĂ': 'var(--c-d)' };
+const SESS = { REFACERE: 'var(--c-out)', A: 'var(--c-a)', B: 'var(--c-b)', C: 'var(--c-c)', D: 'var(--c-d)', FB: 'var(--c-c)', CIR: 'var(--c-a)', REACT: 'var(--c-out)', 'AFARĂ': 'var(--c-out)', 'ÎNOT': 'var(--c-out)', 'CLASĂ': 'var(--c-d)' };
 function loggedSomething(day) { return !!day && (day.weight != null || day.steps != null || (day.meals || []).length || day.log?.completed || day.outdoor); }
 function streak() {
   let d = today(); if (!loggedSomething(S.days[d])) d = addDays(d, -1);
@@ -1175,10 +1177,13 @@ function itemHTML(it, day) {
   if (it.tempo) pills.push(`tempo ${esc(it.tempo)}`);
   if (it.rest) pills.push(`pauză ${esc(it.rest)}`);
   const ch = day.log?.changes?.[it.ex];
-  let h = `<div class="ex"><button class="ex-name" data-act="ex" data-ex="${esc(it.ex)}">${esc(name)}</button>
+  const rj = day.rejects?.[it.ex];
+  const canReject = S.date >= today() && !rj;
+  let h = `<div class="ex"><div class="row between"><button class="ex-name" data-act="ex" data-ex="${esc(it.ex)}">${esc(name)}</button>${canReject ? `<button class="linkbtn small" data-act="reject" data-ex="${esc(it.ex)}">Nu vreau exercițiul ăsta</button>` : ''}</div>
     <div class="ex-meta">${pills.map(p => p.startsWith('<span') ? p : `<span class="pill">${p}</span>`).join('')}</div>
     ${it.note ? `<p class="note">${esc(it.note)}</p>` : ''}
-    ${ch ? `<p class="changed">${esc(changeLine(ch))}</p>` : ''}`;
+    ${ch ? `<p class="changed">${esc(changeLine(ch))}</p>` : ''}
+    ${rj ? `<p class="rejected">Respins: ${esc(rejectLine(rj))}. ${rj.handled ? 'Am pus o alternativă.' : 'Pun o alternativă la următoarea verificare.'} ${rj.handled ? '' : `<button class="linkbtn small" data-act="unreject" data-ex="${esc(it.ex)}">Anulează</button>`}</p>` : ''}`;
   return h + `</div>`;
 }
 
@@ -1195,6 +1200,37 @@ function changeLine(c) {
   return bits.join(' · ');
 }
 const canLog = d => d === today() || d === addDays(today(), -1);
+const REJECT = [['durere', 'Mă doare ceva (genunchi, spate, umăr…)'], ['echipament', 'Nu am echipamentul'], ['nu-imi-place', 'Nu-mi place'], ['greu', 'Prea greu acum'], ['usor', 'Prea ușor'], ['executie', 'Nu știu să-l fac corect'], ['altul', 'Altceva']];
+function rejectLine(r) {
+  const why = REJECT.find(x => x[0] === r.reason)?.[1] || r.reason || '';
+  return [why, r.note, r.scope === 'mereu' ? 'de acum încolo' : ''].filter(Boolean).join(' · ');
+}
+function rejectSheet(ex) {
+  const d = S.date;
+  const name = S.catalog[ex]?.name || sessionExercises(S.plans[d]).find(i => i.ex === ex)?.name || ex;
+  let reason = '', scope = 'plan';
+  openSheet();
+  const p = $('#sheetPanel');
+  const draw = () => {
+    p.innerHTML = `<div class="sheet-head"><div><span class="eyebrow">${esc(fmtDate(d))}</span><h2>${esc(name)}</h2></div><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+      <p class="muted small">Spune-mi de ce nu-l vrei și îți propun altul în loc.</p>
+      <div class="chips">${REJECT.map(([k, n]) => `<button type="button" class="chip" data-r="${k}" aria-pressed="${reason === k}">${n}</button>`).join('')}</div>
+      <label class="f">Explicație<textarea id="rj-note" placeholder="ex. mă trage spatele la ramatul cu bara; prefer cu pieptul sprijinit"></textarea></label>
+      <div class="chips"><button type="button" class="chip" data-s="plan" aria-pressed="${scope === 'plan'}">Doar în planul ăsta</button><button type="button" class="chip" data-s="mereu" aria-pressed="${scope === 'mereu'}">De acum încolo</button></div>
+      <div class="row"><button class="btn primary" id="rj-save">Respinge</button><button class="btn ghost" data-act="close">Renunță</button></div>`;
+    $$('[data-r]', p).forEach(b => b.onclick = () => { note = $('#rj-note').value; reason = b.dataset.r; draw(); $('#rj-note').value = note; });
+    $$('[data-s]', p).forEach(b => b.onclick = () => { note = $('#rj-note').value; scope = b.dataset.s; draw(); $('#rj-note').value = note; });
+    $('#rj-save').onclick = () => {
+      const n = $('#rj-note').value.trim();
+      if (!reason && !n) { toast('Alege un motiv sau scrie o explicație.'); return; }
+      closeSheet();
+      saveDay(d, { rejects: { [ex]: { reason: reason || 'altul', note: n, scope } } });
+      toast('Respins. Trimite notițele și pun o alternativă.');
+    };
+  };
+  let note = '';
+  draw();
+}
 function sessionExercises(session) {
   const out = [];
   (session?.blocks || []).forEach(b => (b.items || []).forEach(it => { if (!out.some(x => x.ex === it.ex)) out.push(it); }));
@@ -1666,7 +1702,7 @@ function viewCalendar() {
     h += `</div></section>`;
   }
   h += '</div>';
-  h += `<p class="muted small">Atinge disponibilitatea unei zile ca s-o schimbi. Marchează doar excepțiile (sală, drumeție, călătorie, indisponibil, kineto); duminică seara planific săptămâna după ele, iar schimbările din cursul săptămânii le preiau la următoarea verificare.</p>`;
+  h += `<p class="muted small">Implicit ești disponibil acasă. Atinge o zi ca să marchezi altceva (sală, drumeție, bazin, clasă, concediu, indisponibil, kineto). Duminică seara planific săptămâna după ele; zilele de refacere după drumeții, nunți sau întoarcerea din concediu le pun eu automat.</p>`;
   return h;
 }
 
@@ -1778,6 +1814,8 @@ document.addEventListener('click', async e => {
   else if (a === 'day') { S.date = addDays(S.date, +b.dataset.n); S.confirm = null; render(); ensureRange(S.date, S.date); }
   else if (a === 'pull') pull();
   else if (a === 'review') reviewSheet();
+  else if (a === 'reject') rejectSheet(b.dataset.ex);
+  else if (a === 'unreject') saveDay(S.date, { rejects: { [b.dataset.ex]: null } });
   else if (a === 'avail') availSheet(b.dataset.date);
   else if (a === 'quick-item') quickItem(b.dataset.id);
   else if (a === 'done-all' && canLog(S.date)) {
