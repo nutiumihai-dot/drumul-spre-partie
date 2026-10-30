@@ -370,8 +370,9 @@ async function putFile(path, b64, sha, message) {
 }
 function errText(e) {
   if (e?.status === 0) return 'Ești offline. Salvarea pleacă în GitHub când revine conexiunea.';
-  if (e?.status === 401 || e?.status === 403) return 'GitHub a refuzat accesul. Verifică tokenul în Profil.';
-  if (e?.status === 404) return 'Nu găsesc repo-ul de date. Verifică numele lui în Profil.';
+  if (e?.status === 401) return 'GitHub nu recunoaște tokenul (401). Copiază-l din nou, complet, sau generează unul nou.';
+  if (e?.status === 403) return 'Tokenul nu are voie să scrie (403). Verifică permisiunea Contents: Read and write.';
+  if (e?.status === 404) return 'Tokenul nu vede repo-ul de date (404). Verifică numele repo-ului și accesul tokenului la el.';
   return 'Salvarea nu a reușit. Încearcă din nou cu butonul de sincronizare.';
 }
 function applyLocal(op) {
@@ -1051,7 +1052,8 @@ document.addEventListener('click', async e => {
   else if (a === 'update-app') updateApp();
   else if (a === 'photo') { openSheet(); const p = b.dataset.path; $('#sheetPanel').innerHTML = `<div class="sheet-head"><h2>Poză</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div><img data-photo="${esc(p)}" alt="Poză" style="border-radius:12px">`; hydratePhotos($('#sheetPanel')); }
   else if (a === 'gh-save') {
-    const tok = $('#gh-token')?.value.trim();
+    const tok = ($('#gh-token')?.value || '').replace(/\s+/g, '');
+    if (tok && !/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(tok)) { toast('Ce ai lipit nu e un token: trebuie să înceapă cu „github_pat_” și să fie un singur șir lung, fără spații.'); return; }
     GH.owner = $('#gh-owner').value.trim() || GH.owner; GH.repo = $('#gh-repo').value.trim() || GH.repo;
     if (tok) GH.token = tok;
     if (!GH.token) { toast('Lipește tokenul ca să te conectezi.'); return; }
