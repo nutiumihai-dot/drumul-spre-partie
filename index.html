@@ -65,6 +65,9 @@ img { max-width: 100%; }
 .thumbs button { border: 0; padding: 0; background: none; }
 .thumbs img:not([src]) { background: var(--surface-2); }
 .hpill.sync { cursor: pointer; background: rgba(255, 255, 255, .08); }
+.sendbar { position: fixed; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); z-index: 6; padding-block: 8px; pointer-events: none; }
+.sendbar .btn { pointer-events: auto; padding-block: 13px; font-size: 15px; }
+body:has(#sendBar:not([hidden])) main { padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
 .hpill.sync.bad { background: var(--bad); border-color: var(--bad); color: #fff; }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--night); }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -288,6 +291,7 @@ textarea { min-height: 70px; resize: vertical; }
   </div>
 </header>
 <main class="wrap" id="view"></main>
+<div class="sendbar" id="sendBar" hidden><div class="wrap"><button class="btn primary wide" data-act="review">Trimite notițele</button></div></div>
 <nav class="tabs" aria-label="Secțiuni">
   <div class="wrap" id="tabs">
     <button data-act="tab" data-tab="azi"><svg viewBox="0 0 24 24"><path d="M3 20l6-10 4 6 3-4 5 8z"/><circle cx="17" cy="6" r="2"/></svg>Azi</button>
@@ -334,10 +338,11 @@ if (/^#(azi|mancare|progres|calendar|catalog|profil)$/.test(location.hash)) S.ta
 
 /* ---------- GitHub storage ---------- */
 // Data lives in a private repo: days/YYYY-MM.json, plan/YYYY-MM.json, messages/YYYY-MM.json keyed by date/id,
-// plus catalog.json, favorites.json, config/profile.json. Every save is queued, merged per file and committed.
+// plus catalog.json, favorites.json, config/profile.json. Edits stay on the device (QUEUE) until the user reviews them
+// and taps "Trimite"; then everything, photos included, goes up as ONE commit through the Git Data API.
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
 };
 const GH = store.get('dsp-gh', null) || { owner: 'nutiumihai-dot', repo: 'drumul-spre-partie-date', branch: 'main', token: '' };
 let QUEUE = store.get('dsp-queue', []);
@@ -362,63 +367,150 @@ async function readFile(path) {
   const j = await r.json();
   return (FILES[path] = { sha: j.sha, data: JSON.parse(dec(j.content)) });
 }
-async function putFile(path, b64, sha, message) {
-  const body = { message, content: b64, branch: GH.branch }; if (sha) body.sha = sha;
-  const r = await gh(`/contents/${cpath(path)}`, { method: 'PUT', body: JSON.stringify(body) });
+async function ghJson(path, opts) {
+  const r = await gh(path, opts);
   if (!r.ok) throw new GhError(r.status, await r.text());
   return r.json();
 }
 function errText(e) {
-  if (e?.status === 0) return 'Ești offline. Salvarea pleacă în GitHub când revine conexiunea.';
+  if (e?.status === 0) return 'Ești offline. Notițele rămân pe dispozitiv; le trimiți când ai internet.';
   if (e?.status === 401) return 'GitHub nu recunoaște tokenul (401). Copiază-l din nou, complet, sau generează unul nou.';
   if (e?.status === 403) return 'Tokenul nu are voie să scrie (403). Verifică permisiunea Contents: Read and write.';
   if (e?.status === 404) return 'Tokenul nu vede repo-ul de date (404). Verifică numele repo-ului și accesul tokenului la el.';
-  return 'Salvarea nu a reușit. Încearcă din nou cu butonul de sincronizare.';
+  return 'Trimiterea nu a reușit. Notițele au rămas pe dispozitiv; încearcă din nou.';
 }
 function applyLocal(op) {
+  if (op.photo) return;
   if (op.file.startsWith('days/')) S.days[op.key] = merge(S.days[op.key], op.patch);
   else if (op.file === 'favorites.json') S.favMap[op.key] = merge(S.favMap[op.key], op.patch);
   else if (op.file === 'catalog.json') S.catalog[op.key] = merge(S.catalog[op.key], op.patch);
   else if (op.file === 'config/profile.json') S.profile = merge(S.profile, op.patch);
 }
-let flushT, flushing = false;
+function saveQueue() {
+  if (!store.set('dsp-queue', QUEUE)) toast('Memoria dispozitivului e plină (probabil din cauza pozelor). Trimite notițele acum.');
+}
 function queueOp(op) {
-  QUEUE.push(op); store.set('dsp-queue', QUEUE);
-  applyLocal(op); cacheSave(); S.sync = 'pending'; schedule();
-  clearTimeout(flushT); flushT = setTimeout(flush, 1500);
+  QUEUE.push(op); saveQueue();
+  applyLocal(op); cacheSave(); schedule();
 }
-function commitMsg(file, ops) {
-  if (file.startsWith('days/')) return `Jurnal ${[...new Set(ops.map(o => o.key))].join(', ')}`;
-  return { 'favorites.json': 'Mese favorite', 'catalog.json': 'Notițe în catalog', 'config/profile.json': 'Profil' }[file] || `Actualizare ${file}`;
+
+/* What changed, in words, for the review sheet and the commit message */
+const LABELS = {
+  kind: 'Tipul zilei', weight: 'Greutate', steps: 'Pași', sleepHours: 'Somn (ore)', wake: 'Cât de greu te-ai trezit', party: 'Party seara',
+  'log.completed': 'Antrenament', 'log.skipReason': 'Motiv', 'log.rpe': 'Efort (RPE)', 'log.painDuring': 'Durere în timpul antrenamentului',
+  'log.painEvening': 'Durere seara', 'log.painMorning': 'Durere a doua zi dimineață', 'log.stiffness': 'Rigiditate', 'log.energy': 'Energie',
+  'log.swelling': 'Umflare', 'log.kneeling': 'Disconfort la sprijin', 'log.notes': 'Notițe antrenament',
+  'outdoor.type': 'Ieșire: tip', 'outdoor.minutes': 'Ieșire: durată (min)', 'outdoor.km': 'Ieșire: distanță (km)', 'outdoor.up': 'Ieșire: urcare (m)',
+  'outdoor.down': 'Ieșire: coborâre (m)', 'outdoor.kneeDown': 'Ieșire: genunchi la coborâre', 'outdoor.notes': 'Ieșire: notițe', 'outdoor.photos': 'Ieșire: poze',
+  userNotes: 'Notițele tale', kinetoNotes: 'Notițe de la kineto', avoid: 'Exerciții de evitat', name: 'Nume'
+};
+const COMPLETED = { complet: 'complet', partial: 'parțial', minim: 'varianta minimă', sarit: 'sărit' };
+const KINDN = Object.fromEntries(KINDS);
+function showVal(v) {
+  if (v == null || v === '') return 'șters';
+  if (v === true) return 'da'; if (v === false) return 'nu';
+  if (Array.isArray(v)) return v.length + ' elemente';
+  const s = String(v); return s.length > 70 ? s.slice(0, 70) + '…' : s;
 }
-async function flush() {
-  if (flushing || !QUEUE.length || !GH.token) return;
-  flushing = true; S.sync = 'pending'; renderChrome();
+function exName(id) { return S.catalog[id]?.name || id; }
+function describe(patch) {
+  const lines = [];
+  const walk = (o, pre) => Object.entries(o).forEach(([k, v]) => {
+    const p = pre ? `${pre}.${k}` : k;
+    if (p === 'date') return;
+    if (p === 'meals') { lines.push(['Mese', v.length ? v.map(m => `${MEALT.find(x => x[0] === m.type)?.[1] || m.type}${m.time ? ' ' + m.time : ''}: ${(m.items || []).map(i => i.name).join(', ') || 'poze'}`).join(' · ') : 'toate șterse']); return; }
+    if (pre === 'log.sets') { lines.push([`Serii · ${exName(k)}`, (v || []).map(s => `${s.kg != null ? s.kg + ' kg × ' : ''}${s.reps ?? '?'}${s.done ? ' ✓' : ''}`).join(', ')]); return; }
+    if (pre === 'log.done') { lines.push([`Făcut · ${exName(k)}`, showVal(v)]); return; }
+    if (p === 'outdoor.photos') { lines.push([LABELS[p], `${(v || []).length}`]); return; }
+    if (isObj(v)) { walk(v, p); return; }
+    let val = showVal(v);
+    if (p === 'kind') val = KINDN[v] || val;
+    if (p === 'log.completed') val = COMPLETED[v] || val;
+    if (p === 'outdoor.type') val = OUT.find(x => x[0] === v)?.[1] || val;
+    lines.push([LABELS[p] || p, val]);
+  });
+  walk(patch || {}, '');
+  return lines;
+}
+function pendingGroups() {
+  const groups = new Map();
+  QUEUE.forEach(o => {
+    if (o.photo) { const g = groups.get('photos') || { title: 'Poze noi', lines: [] }; g.lines.push([o.file.split('/').pop(), 'poză']); groups.set('photos', g); return; }
+    const gk = `${o.file}|${o.key ?? ''}`;
+    const g = groups.get(gk) || { file: o.file, key: o.key, patch: {} };
+    g.patch = merge(g.patch, o.patch); groups.set(gk, g);
+  });
+  return [...groups.values()].map(g => {
+    if (g.lines) return g;
+    let title = 'Altele';
+    if (g.file.startsWith('days/')) title = fmtDate(g.key);
+    else if (g.file === 'favorites.json') title = `Masă favorită: ${g.patch.name || S.favMap[g.key]?.name || ''}`;
+    else if (g.file === 'catalog.json') title = `Catalog: ${exName(g.key)}`;
+    else if (g.file === 'config/profile.json') title = 'Profil';
+    return { title, sortKey: g.key || 'zz', lines: describe(g.patch) };
+  }).sort((a, b) => (a.sortKey || 'zz').localeCompare(b.sortKey || 'zz'));
+}
+function commitMessage(ops) {
+  const days = [...new Set(ops.filter(o => o.file.startsWith('days/')).map(o => o.key))].sort().map(fmtShort);
+  const parts = [];
+  if (days.length) parts.push(days.join(', '));
+  const np = ops.filter(o => o.photo).length;
+  if (np) parts.push(np === 1 ? '1 poză' : `${np} poze`);
+  if (ops.some(o => o.file === 'favorites.json')) parts.push('favorite');
+  if (ops.some(o => o.file === 'catalog.json')) parts.push('catalog');
+  if (ops.some(o => o.file === 'config/profile.json')) parts.push('profil');
+  return `Jurnal: ${parts.join(' · ')}`;
+}
+
+let sending = false;
+async function sendAll() {
+  if (sending || !QUEUE.length || !GH.token) return;
+  sending = true; S.sync = 'sending'; renderChrome();
+  const ops = [...QUEUE];
   try {
-    while (QUEUE.length) {
-      const file = QUEUE[0].file;
-      const ops = QUEUE.filter(o => o.file === file);
-      let done = false;
-      for (let attempt = 0; attempt < 3 && !done; attempt++) {
-        const f = await readFile(file);
-        let data = f.data || {};
-        ops.forEach(o => { data = o.key == null ? merge(data, o.patch) : { ...data, [o.key]: merge(data[o.key], o.patch) }; });
-        try {
-          const j = await putFile(file, enc(JSON.stringify(data, null, 1) + '\n'), f.sha, commitMsg(file, ops));
-          FILES[file] = { sha: j.content.sha, data }; done = true;
-        } catch (e) { if (e.status !== 409 && e.status !== 422) throw e; }
+    let done = false;
+    for (let attempt = 0; attempt < 3 && !done; attempt++) {
+      const head = (await ghJson(`/git/ref/heads/${GH.branch}`)).object.sha;
+      const baseTree = (await ghJson(`/git/commits/${head}`)).tree.sha;
+      const tree = [], written = {};
+      for (const file of [...new Set(ops.filter(o => !o.photo).map(o => o.file))]) {
+        const r = await gh(`/contents/${cpath(file)}?ref=${head}`);
+        if (!r.ok && r.status !== 404) throw new GhError(r.status, await r.text());
+        let data = r.ok ? JSON.parse(dec((await r.json()).content)) : {};
+        ops.filter(o => o.file === file).forEach(o => { data = o.key == null ? merge(data, o.patch) : { ...data, [o.key]: merge(data[o.key], o.patch) }; });
+        tree.push({ path: file, mode: '100644', type: 'blob', content: JSON.stringify(data, null, 1) + '\n' });
+        written[file] = data;
       }
-      if (!done) throw new GhError(409, 'conflict');
-      QUEUE = QUEUE.filter(o => !ops.includes(o)); store.set('dsp-queue', QUEUE);
+      for (const o of ops.filter(o => o.photo)) {
+        const b = await ghJson('/git/blobs', { method: 'POST', body: JSON.stringify({ content: o.b64, encoding: 'base64' }) });
+        tree.push({ path: o.file, mode: '100644', type: 'blob', sha: b.sha });
+      }
+      const t = await ghJson('/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: baseTree, tree }) });
+      const c = await ghJson('/git/commits', { method: 'POST', body: JSON.stringify({ message: commitMessage(ops), tree: t.sha, parents: [head] }) });
+      const u = await gh(`/git/refs/heads/${GH.branch}`, { method: 'PATCH', body: JSON.stringify({ sha: c.sha, force: false }) });
+      if (u.ok) { done = true; Object.entries(written).forEach(([f, data]) => FILES[f] = { sha: null, data }); }
+      else if (u.status !== 422 && u.status !== 409) throw new GhError(u.status, await u.text());
     }
-    S.sync = 'ok';
+    if (!done) throw new GhError(409, 'conflict');
+    QUEUE = QUEUE.filter(o => !ops.includes(o)); saveQueue();
+    ops.filter(o => o.photo).forEach(o => { if (!PHOTO[o.file]) PHOTO[o.file] = `data:image/jpeg;base64,${o.b64}`; });
+    S.sync = 'ok'; closeSheet(); toast('Notițele au fost trimise în GitHub.');
   } catch (e) {
     S.sync = e.status === 0 ? 'offline' : 'error';
-    if (e.status !== 0) toast(errText(e));
+    toast(errText(e));
   }
-  flushing = false; renderChrome();
+  sending = false; renderChrome(); schedule();
 }
-window.addEventListener('online', () => flush());
+function reviewSheet() {
+  openSheet();
+  const groups = pendingGroups();
+  const p = $('#sheetPanel');
+  p.innerHTML = `<div class="sheet-head"><h2>Ce trimiți</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+    ${groups.length ? groups.map(g => `<section class="card"><h3>${esc(g.title)}</h3><dl class="kv">${g.lines.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></section>`).join('')
+      : '<p class="empty">Nu ai modificări netrimise.</p>'}
+    ${groups.length ? `<div class="row"><button class="btn primary" data-act="send">Trimite în GitHub</button><button class="btn ghost" data-act="close">Mai lucrez</button></div>
+    <div class="row" id="discardRow"><button class="btn sm danger" data-act="discard-ask">Renunță la toate modificările</button></div>` : ''}`;
+}
 function nest(path, value) {
   const keys = path.split('.'); const out = {}; let o = out;
   keys.forEach((k, i) => { if (i === keys.length - 1) o[k] = value; else { o[k] = {}; o = o[k]; } });
@@ -477,13 +569,15 @@ async function pull() {
     S.syncMsg = errText(e);
     if (e.status !== 0) toast(S.syncMsg);
   }
-  render(); flush();
+  render();
 }
 
 /* ---------- photos ---------- */
 const PHOTO = {};
 async function photoURL(path) {
   if (PHOTO[path]) return PHOTO[path];
+  const local = QUEUE.find(o => o.photo && o.file === path);
+  if (local) return (PHOTO[path] = `data:image/jpeg;base64,${local.b64}`);
   const r = await gh(`/contents/${cpath(path)}?ref=${encodeURIComponent(GH.branch)}`, { headers: { Accept: 'application/vnd.github.raw+json' } });
   if (!r.ok) throw new GhError(r.status, 'photo');
   return (PHOTO[path] = URL.createObjectURL(await r.blob()));
@@ -557,10 +651,13 @@ function renderChrome() {
   if (ph) meta += `<span class="hpill">${esc(ph.name)}</span>`;
   if (sb?.date) meta += `<span class="hpill hot"><b>${daysBetween(t, sb.date)}</b> zile până la pârtie</span>`;
   if (GH.token) {
-    const n = QUEUE.length;
-    const st = { ok: '↻ Sincronizat', pending: `↻ Se salvează${n ? ` (${n})` : '…'}`, loading: '↻ Se încarcă…', offline: `Offline · ${n} în așteptare`, error: '↻ Eroare · reîncearcă', auth: 'Verifică tokenul' }[S.sync] || '↻';
-    meta += `<button class="hpill sync ${S.sync === 'error' || S.sync === 'auth' ? 'bad' : ''}" data-act="pull" title="Reîncarcă datele din GitHub">${st}</button>`;
+    const st = { ok: '↻ Actualizat', sending: '↑ Se trimite…', loading: '↻ Se încarcă…', offline: '↻ Offline', error: '↻ Eroare · reîncearcă', auth: 'Verifică tokenul' }[S.sync] || '↻';
+    meta += `<button class="hpill sync ${S.sync === 'error' || S.sync === 'auth' ? 'bad' : ''}" data-act="pull" title="Descarcă noutățile din GitHub">${st}</button>`;
   }
+  const n = pendingGroups().length;
+  const bar = $('#sendBar');
+  bar.hidden = !(GH.token && QUEUE.length);
+  bar.querySelector('button').textContent = sending ? 'Se trimite…' : `Trimite notițele (${n})`;
   $('#brandMeta').innerHTML = meta;
 }
 
@@ -825,7 +922,7 @@ function mealSheet(meal, isNew) {
       const list = [...(S.days[S.date]?.meals || [])];
       const i = list.findIndex(x => x.id === m.id);
       if (i >= 0) { if (JSON.stringify(list[i].items) !== JSON.stringify(m.items)) delete m.est; list[i] = m; } else list.push(m);
-      closeSheet(); await saveDay(S.date, { meals: list }); toast('Masa a fost salvată.');
+      closeSheet(); await saveDay(S.date, { meals: list }); toast('Masa e notată. O trimiți cu butonul de jos.');
     };
   };
   const collect = () => {
@@ -859,7 +956,7 @@ function starSheet(meal) {
   $('#f-save').onclick = async () => {
     const id = uid(); closeSheet();
     await saveTo('favorites.json', id, { name: $('#f-name')?.value?.trim() || def, type: meal.type, source: meal.source, place: meal.place || '', items: meal.items || [] });
-    toast('Adăugat la favorite.');
+    toast('Favorit notat. Îl trimiți cu butonul de jos.');
   };
 }
 
@@ -975,7 +1072,7 @@ function exSheet(id) {
     ${c.video ? `<a class="btn" href="https://www.youtube.com/results?search_query=${encodeURIComponent(c.video)}" target="_blank" rel="noopener">Caută video pe YouTube ↗</a>` : ''}
     <label class="f">Notițele tale<textarea id="exNotes" placeholder="ex. la 14 kg simt umărul stâng">${esc(c.userNotes || '')}</textarea></label>
     <div class="row"><button class="btn primary" id="exSave">Salvează notițele</button></div>`;
-  $('#exSave').onclick = async () => { await saveTo('catalog.json', id, { userNotes: $('#exNotes').value.trim() }); toast('Notițele au fost salvate.'); };
+  $('#exSave').onclick = async () => { await saveTo('catalog.json', id, { userNotes: $('#exNotes').value.trim() }); toast('Notițe notate. Le trimiți cu butonul de jos.'); };
 }
 
 /* ---------- profile ---------- */
@@ -1040,9 +1137,9 @@ async function uploadFiles(files) {
       const { blob, type } = await shrink(f);
       const ext = type === 'image/png' ? 'png' : 'jpg';
       const path = `photos/${S.date}-${uid()}.${ext}`;
-      await putFile(path, await blobB64(blob), null, `Poză ${S.date}`);
+      QUEUE.push({ file: path, photo: true, b64: await blobB64(blob) }); saveQueue();
       PHOTO[path] = URL.createObjectURL(blob); ids.push(path);
-    } catch (e) { toast(e?.status === 0 ? 'Ești offline: pozele se pot încărca doar cu internet.' : 'O poză nu s-a putut încărca.'); }
+    } catch (e) { toast('O poză nu s-a putut pregăti.'); }
   }
   if (ids.length) toast(ids.length === 1 ? 'Poza a fost încărcată.' : `${ids.length} poze încărcate.`);
   return ids;
@@ -1054,7 +1151,11 @@ document.addEventListener('click', async e => {
   const a = b.dataset.act;
   if (a === 'tab') { S.tab = b.dataset.tab; S.confirm = null; try { localStorage.setItem('dsp-tab', S.tab); } catch (er) {} render(); window.scrollTo(0, 0); }
   else if (a === 'day') { S.date = addDays(S.date, +b.dataset.n); S.confirm = null; render(); ensureRange(S.date, S.date); }
-  else if (a === 'pull') { if (QUEUE.length) flush(); else pull(); }
+  else if (a === 'pull') pull();
+  else if (a === 'review') reviewSheet();
+  else if (a === 'send') sendAll();
+  else if (a === 'discard-ask') $('#discardRow').innerHTML = `<span class="small">Ștergi toate modificările netrimise?</span><button class="btn sm danger" data-act="discard">Da, renunță</button><button class="btn sm ghost" data-act="review">Nu</button>`;
+  else if (a === 'discard') { QUEUE = []; saveQueue(); closeSheet(); toast('Modificările netrimise au fost anulate.'); pull(); }
   else if (a === 'update-app') updateApp();
   else if (a === 'photo') { openSheet(); const p = b.dataset.path; $('#sheetPanel').innerHTML = `<div class="sheet-head"><h2>Poză</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div><img data-photo="${esc(p)}" alt="Poză" style="border-radius:12px">`; hydratePhotos($('#sheetPanel')); }
   else if (a === 'gh-save') {
@@ -1103,7 +1204,7 @@ $('#view').addEventListener('change', async e => {
   if (el.dataset.cal) { await saveDay(el.dataset.cal, { kind: el.value }); return; }
   if (el.dataset.prof) {
     const v = el.dataset.prof === 'avoid' ? el.value.split('\n').map(s => s.trim()).filter(Boolean) : el.value.trim();
-    await saveTo('config/profile.json', null, { [el.dataset.prof]: v }); toast('Salvat.'); return;
+    await saveTo('config/profile.json', null, { [el.dataset.prof]: v }); toast('Notat. Trimite cu butonul de jos.'); return;
   }
   if (el.dataset.set) {
     const ex = el.dataset.set;
@@ -1144,7 +1245,7 @@ function init() {
   render();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   pull();
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && GH.token) { if (QUEUE.length) flush(); else pull(); } });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && GH.token && !sending) pull(); });
 }
 init();
 </script>
