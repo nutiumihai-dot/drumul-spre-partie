@@ -396,7 +396,7 @@ function queueOp(op) {
 
 /* What changed, in words, for the review sheet and the commit message */
 const LABELS = {
-  kind: 'Tipul zilei', weight: 'Greutate', steps: 'Pași', sleepHours: 'Somn (ore)', wake: 'Cât de greu te-ai trezit', party: 'Party seara',
+  kind: 'Tipul zilei', weight: 'Greutate dimineața', steps: 'Pași', sleepHours: 'Somn azi-noapte (ore)', wake: 'Trezire (1–5)', party: 'Party seara',
   'log.completed': 'Antrenament', 'log.skipReason': 'Motiv', 'log.rpe': 'Efort (RPE)', 'log.painDuring': 'Durere în timpul antrenamentului',
   'log.painEvening': 'Durere seara', 'log.painMorning': 'Durere a doua zi dimineață', 'log.stiffness': 'Rigiditate', 'log.energy': 'Energie',
   'log.swelling': 'Umflare', 'log.kneeling': 'Disconfort la sprijin', 'log.notes': 'Notițe antrenament',
@@ -702,11 +702,11 @@ function viewAzi() {
   h += `<section class="card"><h2>Ziua</h2>
     <div class="grid2">
       <label class="f">Tipul zilei<select data-path="kind">${KINDS.map(([k, l]) => `<option value="${k}" ${day.kind === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-      <label class="f">Greutate (kg)<input type="text" inputmode="decimal" data-path="weight" data-type="num" value="${day.weight ?? ''}" placeholder="ex. 87,6"></label>
-      <label class="f">Pași<input type="text" inputmode="numeric" data-path="steps" data-type="num" value="${day.steps ?? ''}" placeholder="din Google Fit"></label>
-      <label class="f">Somn (ore)<input type="text" inputmode="decimal" data-path="sleepHours" data-type="num" value="${day.sleepHours ?? ''}" placeholder="ex. 7,5"></label>
+      <label class="f">Greutate azi dimineață (kg)<input type="text" inputmode="decimal" data-path="weight" data-type="num" value="${day.weight ?? ''}" placeholder="ex. 87,6"></label>
+      <label class="f">Pași azi (totalul de seară)<input type="text" inputmode="numeric" data-path="steps" data-type="num" value="${day.steps ?? ''}" placeholder="din Google Fit"></label>
+      <label class="f">Somn azi-noapte (ore)<input type="text" inputmode="decimal" data-path="sleepHours" data-type="num" value="${day.sleepHours ?? ''}" placeholder="ex. 7,5"></label>
     </div>
-    ${q('Cât de greu te-ai trezit', 'wake', day.wake ?? null, { min: 1, max: 5, hint: '1 = ușor · 5 = foarte greu' })}
+    ${q('Cât de greu te-ai trezit azi', 'wake', day.wake ?? null, { min: 1, max: 5, hint: '1 = ușor · 5 = foarte greu' })}
     <label class="done-line"><input type="checkbox" data-path="party" data-type="bool" ${day.party ? 'checked' : ''}> Party / ieșire cu băutură în seara asta</label>
   </section>`;
 
