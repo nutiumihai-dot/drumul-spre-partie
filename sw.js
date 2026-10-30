@@ -1,6 +1,6 @@
 // Network-first for the app's own files so updates arrive on the next open; cached copy when offline.
 // GitHub API calls are never cached here: the page talks to api.github.com directly.
-const CACHE = 'dsp-v5';
+const CACHE = 'dsp-v6';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -24,7 +24,7 @@ self.addEventListener('fetch', e => {
     return;
   }
   if (url.origin !== location.origin) return;
-  e.respondWith(fetch(e.request).then(res => {
+  e.respondWith(fetch(e.request, { cache: 'no-cache' }).then(res => {
     const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return res;
   }).catch(() => caches.match(e.request).then(hit => hit || caches.match('index.html'))));
 });
