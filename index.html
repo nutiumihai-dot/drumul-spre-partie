@@ -1,0 +1,1144 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0C1A30">
+<title>Drumul spre Pârtie</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: night-sky header band with a mountain ridge, bright snow cards below, bold summit-orange actions; one mobile column, icon tab bar at the bottom. */
+:root {
+  --bg: #F1F4F9;
+  --surface: #FFFFFF;
+  --surface-2: #E7ECF4;
+  --fg: #0D1626;
+  --muted: #5A677C;
+  --line: #D7DEE9;
+  --accent: #FF5A1F;
+  --accent-2: #FF8A3D;
+  --accent-fg: #FFFFFF;
+  --accent-soft: #FFE7DC;
+  --ice: #2B7BF0;
+  --ice-soft: #DCEAFF;
+  --night: #0C1A30;
+  --night-2: #1D3557;
+  --night-fg: #F3F7FC;
+  --night-muted: #9FB2CC;
+  --ok: #17A05D;
+  --warn: #EE9B00;
+  --bad: #E2332A;
+  --c-a: #FF5A1F; --c-b: #2B7BF0; --c-c: #17A05D; --c-d: #8A5CF6; --c-out: #0FA3B1;
+  --shadow: 0 1px 2px rgba(13, 22, 38, .06), 0 6px 18px rgba(13, 22, 38, .06);
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #08101C; --surface: #111C2D; --surface-2: #1A273C; --fg: #EAF0F8; --muted: #8F9DB3; --line: #233350;
+    --accent: #FF6B33; --accent-2: #FF9A55; --accent-fg: #FFFFFF; --accent-soft: #3B1E12; --ice: #5A9BFF; --ice-soft: #142A4D;
+    --night: #050B15; --night-2: #13253F; --night-fg: #F3F7FC; --night-muted: #8EA3C0;
+    --ok: #2CC779; --warn: #F5B02E; --bad: #F2554B;
+    --c-a: #FF6B33; --c-b: #5A9BFF; --c-c: #2CC779; --c-d: #A585FF; --c-out: #2CC4D1;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 18px rgba(0, 0, 0, .25); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #08101C; --surface: #111C2D; --surface-2: #1A273C; --fg: #EAF0F8; --muted: #8F9DB3; --line: #233350;
+  --accent: #FF6B33; --accent-2: #FF9A55; --accent-fg: #FFFFFF; --accent-soft: #3B1E12; --ice: #5A9BFF; --ice-soft: #142A4D;
+  --night: #050B15; --night-2: #13253F; --night-fg: #F3F7FC; --night-muted: #8EA3C0;
+  --ok: #2CC779; --warn: #F5B02E; --bad: #F2554B;
+  --c-a: #FF6B33; --c-b: #5A9BFF; --c-c: #2CC779; --c-d: #A585FF; --c-out: #2CC4D1;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 18px rgba(0, 0, 0, .25); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+img { max-width: 100%; }
+.thumbs button { border: 0; padding: 0; background: none; }
+.thumbs img:not([src]) { background: var(--surface-2); }
+.hpill.sync { cursor: pointer; background: rgba(255, 255, 255, .08); }
+.hpill.sync.bad { background: var(--bad); border-color: var(--bad); color: #fff; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--night); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 680px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* header: night band + ridge */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; color: var(--night-fg);
+  background: linear-gradient(160deg, var(--night) 0%, var(--night-2) 100%); overflow: hidden; }
+.top .ridge { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 46px; pointer-events: none; }
+.top .ridge .far { fill: var(--night-2); opacity: .9; }
+.top .ridge .near { fill: var(--night); opacity: .85; }
+.top .ridge .snow { fill: var(--night-fg); opacity: .22; }
+.top .wrap { position: relative; padding-block: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand-name { font-family: var(--font-display); font-weight: 700; font-style: italic; font-size: 24px; letter-spacing: .03em; text-transform: uppercase; line-height: 1; }
+.brand-name span { color: var(--accent-2); }
+.brand-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.hpill { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--night-muted); border: 1px solid rgba(255, 255, 255, .16); border-radius: 999px; padding: 4px 10px; }
+.hpill b { color: var(--night-fg); font-family: var(--font-display); font-size: 15px; letter-spacing: 0; }
+.hpill.hot { background: var(--accent); border-color: var(--accent); color: #fff; }
+.hpill.hot b { color: #fff; }
+.datebar { display: flex; align-items: center; gap: 8px; }
+.datebar .dlabel { flex: 1; text-align: center; font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--night-fg); background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .14); border-radius: 12px; padding: 7px 8px; }
+.top .iconbtn { color: var(--night-fg); background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .16); }
+.iconbtn { width: 42px; height: 38px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-size: 22px; line-height: 1; }
+
+/* main + tabs */
+main { padding-block: 16px calc(92px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); box-shadow: 0 -4px 20px rgba(13, 22, 38, .08); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.tabs .wrap { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; padding-block: 6px; }
+.tabs button { border: 0; background: none; padding: 6px 0 5px; border-radius: 12px; font-size: 11px; font-weight: 600; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.tabs svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tabs button[aria-current="page"] { color: var(--accent); }
+.tabs button[aria-current="page"] svg { background: var(--accent-soft); border-radius: 8px; padding: 2px; width: 30px; margin-inline: -4px; }
+
+/* cards & type */
+.card { background: var(--surface); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; box-shadow: var(--shadow); }
+.card.flat { background: transparent; box-shadow: none; border: 2px dashed var(--line); }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 23px; line-height: 1.1; margin: 0; letter-spacing: .01em; text-wrap: balance; }
+h3 { font-family: var(--font-display); font-weight: 700; font-size: 16px; margin: 0; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.between { justify-content: space-between; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.pre { white-space: pre-line; }
+.empty { color: var(--muted); font-size: 14px; margin: 0; }
+p { margin: 0; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+/* forms */
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--muted); font-weight: 600; min-width: 0; }
+input[type=text], input[type=time], input[type=search], input:not([type]), select, textarea {
+  width: 100%; border: 2px solid var(--line); background: var(--surface); border-radius: 12px; padding: 9px 11px; color: var(--fg); font-size: 16px; min-width: 0;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; }
+textarea { min-height: 70px; resize: vertical; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 2px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 16px; font-weight: 700; font-size: 14px; }
+.btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-fg); border-color: transparent; box-shadow: 0 4px 14px rgba(255, 90, 31, .3); }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--bad); border-color: var(--bad); background: transparent; }
+.btn.sm { padding: 6px 12px; font-size: 13px; }
+.btn.wide { width: 100%; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 2px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+
+/* scales */
+.scale { display: grid; gap: 4px; }
+.scale button { border: 0; background: var(--surface-2); border-radius: 9px; padding: 8px 0; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.scale button[aria-pressed="true"] { color: #fff; background: var(--accent); transform: scale(1.06); }
+.scale button[aria-pressed="true"].s-ok { background: var(--ok); }
+.scale button[aria-pressed="true"].s-warn { background: var(--warn); }
+.scale button[aria-pressed="true"].s-bad { background: var(--bad); }
+.qlabel { font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; gap: 8px; }
+
+/* today hero */
+.today-hero { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+.ring { width: 92px; height: 92px; position: relative; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .trk { fill: none; stroke: var(--surface-2); stroke-width: 10; }
+.ring .val { fill: none; stroke: url(#ringGrad); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset .5s ease; }
+.ring .lbl { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.ring .lbl b { font-family: var(--font-display); font-size: 28px; font-weight: 700; }
+.ring .lbl span { font-size: 11px; color: var(--muted); font-weight: 600; }
+.checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; font-size: 14px; font-weight: 600; }
+.checks span { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.checks span.on { color: var(--fg); }
+.checks i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); flex: none; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-size: 11px; color: #fff; }
+.checks span.on i { background: var(--ok); border-color: var(--ok); }
+.streak { display: flex; align-items: baseline; gap: 6px; font-weight: 600; color: var(--muted); font-size: 13px; }
+.streak b { font-family: var(--font-display); font-style: italic; font-size: 26px; color: var(--accent); }
+.msg { border-left: 4px solid var(--accent); padding: 2px 0 2px 12px; display: flex; flex-direction: column; gap: 4px; }
+
+/* workout */
+.session-head { color: #fff; background: var(--sess, var(--accent)); background-image: linear-gradient(135deg, rgba(255, 255, 255, .0) 30%, rgba(255, 255, 255, .18) 100%); position: relative; overflow: hidden; }
+.session-head .eyebrow, .session-head .muted { color: rgba(255, 255, 255, .85); }
+.session-head .code { position: absolute; right: -6px; bottom: -28px; font-family: var(--font-display); font-weight: 700; font-style: italic; font-size: 130px; line-height: 1; opacity: .18; pointer-events: none; }
+.session-head h2 { font-size: 28px; font-style: italic; }
+.session-head .pill { background: rgba(255, 255, 255, .22); color: #fff; }
+.setup { border: 2px solid var(--ice); background: var(--ice-soft); box-shadow: none; }
+.setup .eyebrow { color: var(--ice); }
+.setup ul, .swap ol, .info ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.block-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; border-left: 4px solid var(--sess, var(--accent)); padding-left: 10px; margin-left: -16px; padding-block: 2px; }
+.ex { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.block-head + .ex, .block-head + .note + .ex { border-top: 0; padding-top: 0; }
+.ex-name { background: none; border: 0; padding: 0; text-align: left; font-weight: 700; font-size: 17px; color: var(--fg); display: inline-flex; align-items: center; gap: 6px; }
+.ex-name::after { content: "i"; font-size: 11px; font-weight: 700; font-style: italic; width: 18px; height: 18px; border-radius: 50%; background: var(--surface-2); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; }
+.ex-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { font-size: 12px; font-weight: 700; background: var(--surface-2); border-radius: 8px; padding: 3px 9px; font-variant-numeric: tabular-nums; }
+.pill.load { background: var(--accent-soft); color: var(--accent); }
+.setrow { display: grid; grid-template-columns: 32px 1fr 1fr 44px; gap: 6px; align-items: center; font-variant-numeric: tabular-nums; }
+.setrow.nokg { grid-template-columns: 32px 1fr 44px; }
+.setrow input[type=text] { padding: 8px; text-align: center; font-weight: 600; }
+.setrow .sn { font-size: 12px; font-weight: 700; color: var(--muted); background: var(--surface-2); border-radius: 8px; text-align: center; padding: 6px 0; }
+.chk { display: flex; align-items: center; justify-content: center; }
+.chk input, .done-line input { width: 24px; height: 24px; accent-color: var(--ok); }
+.done-line { display: flex; gap: 10px; align-items: center; font-size: 14px; font-weight: 600; }
+.swap { box-shadow: none; border: 0; background:
+  repeating-linear-gradient(-45deg, var(--accent-soft) 0 14px, var(--surface) 14px 28px); }
+.swap h2 { color: var(--accent); font-style: italic; }
+.swap ol { background: var(--surface); border-radius: 12px; padding: 12px 12px 12px 30px; }
+.note { font-size: 13px; color: var(--muted); }
+
+/* meals */
+.meal { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
+.meal:first-of-type { border-top: 0; padding-top: 0; }
+.meal ul { margin: 0; padding-left: 18px; }
+.thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+.thumbs img { width: 68px; height: 68px; object-fit: cover; border-radius: 10px; }
+.item-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--surface); border-radius: 12px; padding: 10px; box-shadow: var(--shadow); }
+.item-row .full { grid-column: 1 / -1; }
+.totals { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.meter { display: flex; flex-direction: column; gap: 6px; }
+.meter .v { font-family: var(--font-display); font-size: 34px; font-style: italic; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+.meter .bar { height: 10px; background: var(--surface-2); border-radius: 5px; overflow: hidden; }
+.meter .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 5px; }
+.meter.p .bar span { background: linear-gradient(90deg, var(--ice), #7DB4FF); }
+
+/* progress */
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.tile { background: var(--surface); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; box-shadow: var(--shadow); border-top: 4px solid var(--tile, var(--accent)); }
+.tile .v { font-family: var(--font-display); font-weight: 700; font-style: italic; font-size: 32px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.chart { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font-size: 11px; font-family: var(--font-body); }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .band { fill: var(--ok); opacity: .14; }
+.chart .line { fill: none; stroke: var(--accent); stroke-width: 3; }
+.chart .dot { fill: var(--muted); opacity: .6; }
+.chart .bar { fill: var(--accent); }
+.chart .bar-ice { fill: var(--ice); }
+.chart .d-ok { fill: var(--ok); } .chart .d-warn { fill: var(--warn); } .chart .d-bad { fill: var(--bad); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+/* calendar */
+.cal { display: flex; flex-direction: column; }
+.calday { display: grid; grid-template-columns: 52px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; }
+.calday:first-child { border-top: 0; }
+.dn { font-family: var(--font-display); font-weight: 700; font-size: 22px; line-height: 1; text-align: center; background: var(--surface-2); border-radius: 12px; padding: 6px 0; border-bottom: 4px solid var(--sess, transparent); }
+.calday.today .dn { background: var(--accent); color: #fff; }
+.calday.today .dn small { color: rgba(255, 255, 255, .85); }
+.dn small { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
+.calbody { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.calbody select { padding: 6px 8px; font-size: 14px; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--fg); font-weight: 700; text-align: left; font-size: 15px; }
+.status { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 2px 8px; background: var(--surface-2); text-transform: uppercase; letter-spacing: .04em; }
+.status.ok { background: var(--ok); color: #fff; } .status.skip { background: var(--bad); color: #fff; } .status.min { background: var(--warn); color: #fff; }
+
+/* catalog */
+.cat-item { display: flex; justify-content: space-between; gap: 10px; align-items: center; border: 0; border-top: 1px solid var(--line); background: none; padding: 11px 0; text-align: left; width: 100%; }
+.cat-item:first-of-type { border-top: 0; }
+.cat-item span:first-child { font-weight: 700; }
+.sec { display: flex; flex-direction: column; gap: 6px; }
+.sec ol, .sec ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 3px; }
+.knee { background: var(--ok); color: #fff; border-radius: 12px; padding: 12px 14px; }
+
+/* profile */
+.timeline { display: flex; flex-direction: column; }
+.ph { display: grid; grid-template-columns: 16px 1fr; gap: 12px; padding-bottom: 14px; position: relative; }
+.ph::before { content: ""; position: absolute; left: 7px; top: 18px; bottom: 0; width: 2px; background: var(--line); }
+.ph:last-child::before { display: none; }
+.ph .dotc { width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--line); margin-top: 3px; background: var(--surface); position: relative; z-index: 1; }
+.ph.cur .dotc { background: var(--accent); border-color: var(--accent-soft); box-shadow: 0 0 0 4px var(--accent-soft); }
+.ph.past .dotc { background: var(--ok); border-color: var(--ok); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-weight: 600; }
+
+/* sheet & toast */
+.sheet { position: fixed; inset: 0; z-index: 20; background: rgba(5, 11, 21, .55); display: flex; align-items: flex-end; justify-content: center; }
+.sheet-panel { background: var(--bg); width: 100%; max-width: 680px; max-height: 92%; overflow-y: auto; border-radius: 22px 22px 0 0; padding: 18px max(16px, env(safe-area-inset-right, 0px)) calc(22px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 12px; }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 30; background: var(--night); color: var(--night-fg); padding: 10px 18px; border-radius: 12px; font-size: 14px; font-weight: 600; max-width: calc(100% - 32px); box-shadow: var(--shadow); }
+@media (prefers-reduced-motion: no-preference) {
+  .sheet-panel { animation: up .2s ease-out; } @keyframes up { from { transform: translateY(30px); opacity: .6; } }
+  .scale button, .chip, .btn { transition: transform .12s ease, background-color .12s ease; }
+  .btn:active, .chip:active, .scale button:active { transform: scale(.96); }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF5A1F"/><stop offset="1" stop-color="#FFB547"/></linearGradient></defs></svg>
+<header class="top">
+  <svg class="ridge" viewBox="0 0 400 46" preserveAspectRatio="none" aria-hidden="true">
+    <path class="far" d="M0 46 L0 30 L40 18 L70 26 L110 6 L150 24 L190 14 L230 28 L270 4 L310 22 L350 12 L400 26 L400 46 Z"/>
+    <path class="snow" d="M100 10 L110 6 L120 11 L113 10 Z M262 8 L270 4 L279 9 L271 8 Z"/>
+    <path class="near" d="M0 46 L0 38 L60 30 L95 36 L140 26 L185 38 L240 30 L290 40 L340 32 L400 38 L400 46 Z"/>
+  </svg>
+  <div class="wrap">
+    <div class="brand">
+      <span class="brand-name">Drumul spre <span>Pârtie</span></span>
+      <span class="brand-meta" id="brandMeta"></span>
+    </div>
+    <div class="datebar" id="datebar">
+      <button class="iconbtn" data-act="day" data-n="-1" aria-label="Ziua anterioară">‹</button>
+      <button class="dlabel" id="dateLabel" data-act="today" aria-label="Mergi la azi"></button>
+      <button class="iconbtn" data-act="day" data-n="1" aria-label="Ziua următoare">›</button>
+    </div>
+  </div>
+</header>
+<main class="wrap" id="view"></main>
+<nav class="tabs" aria-label="Secțiuni">
+  <div class="wrap" id="tabs">
+    <button data-act="tab" data-tab="azi"><svg viewBox="0 0 24 24"><path d="M3 20l6-10 4 6 3-4 5 8z"/><circle cx="17" cy="6" r="2"/></svg>Azi</button>
+    <button data-act="tab" data-tab="mancare"><svg viewBox="0 0 24 24"><path d="M7 3v8M5 3v5a2 2 0 004 0V3M7 11v10M17 3c-2 2-3 5-3 8h3v10"/></svg>Mâncare</button>
+    <button data-act="tab" data-tab="progres"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-5 3 3 5-7"/></svg>Progres</button>
+    <button data-act="tab" data-tab="calendar"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Calendar</button>
+    <button data-act="tab" data-tab="catalog"><svg viewBox="0 0 24 24"><path d="M5 4h10a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h10"/></svg>Catalog</button>
+    <button data-act="tab" data-tab="profil"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Profil</button>
+  </div>
+</nav>
+<div class="sheet" id="sheet" hidden><div class="sheet-panel" id="sheetPanel" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
+const today = () => iso(new Date());
+const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+const ZILE = ['duminică', 'luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă'];
+const ZS = ['Du', 'Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sâ'];
+const LUNI = ['ian', 'feb', 'mar', 'apr', 'mai', 'iun', 'iul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const fmtDate = s => { const d = parse(s); return `${ZILE[d.getDay()]}, ${d.getDate()} ${LUNI[d.getMonth()]}`; };
+const fmtShort = s => { const d = parse(s); return `${d.getDate()} ${LUNI[d.getMonth()]}`; };
+const toNum = v => { const t = String(v ?? '').replace(',', '.').trim(); if (t === '') return null; const n = Number(t); return isFinite(n) ? n : null; };
+const fmtN = (v, dec = 1) => v == null || isNaN(v) ? '–' : Number(v).toLocaleString('ro-RO', { maximumFractionDigits: dec });
+const uid = () => 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const kneeCls = v => v == null ? '' : v <= 3 ? 's-ok' : v <= 5 ? 's-warn' : 's-bad';
+
+const KINDS = [['', '— nesetat —'], ['acasa', 'Antrenament acasă'], ['sala', 'Sală'], ['afara', 'Afară (drumeție, înot…)'], ['kineto', 'Kineto'], ['odihna', 'Odihnă'], ['indisponibil', 'Indisponibil']];
+const SKIP = ['Obosit', 'Ocupat', 'Durere genunchi', 'Fără chef', 'Plecat', 'După party', 'Bolnav', 'Altul'];
+const MEALT = [['mic-dejun', 'Mic dejun'], ['pranz', 'Prânz'], ['cina', 'Cină'], ['gustare', 'Gustare']];
+const SRC = [['acasa', 'Acasă'], ['meniu', 'Meniul zilei'], ['glovo', 'Glovo / livrare'], ['restaurant', 'Restaurant']];
+const PREP = ['', 'crud', 'fiert', 'la grătar', 'la cuptor', 'prăjit', 'altul'];
+const OUT = [['drumetie', 'Drumeție'], ['plimbare', 'Plimbare'], ['inot', 'Înot'], ['bicicleta', 'Bicicletă'], ['altul', 'Altul']];
+
+const S = { ready: {}, sync: 'ok', tab: 'azi', date: today(), profile: null, days: {}, plans: {}, catalog: {}, msgMap: {}, favMap: {}, messages: [], favorites: [], fallback: {}, range: 30, calStart: null, confirm: null };
+try { const t = localStorage.getItem('dsp-tab'); if (t) S.tab = t; } catch (e) {}
+if (/^#(azi|mancare|progres|calendar|catalog|profil)$/.test(location.hash)) S.tab = location.hash.slice(1);
+
+/* ---------- GitHub storage ---------- */
+// Data lives in a private repo: days/YYYY-MM.json, plan/YYYY-MM.json, messages/YYYY-MM.json keyed by date/id,
+// plus catalog.json, favorites.json, config/profile.json. Every save is queued, merged per file and committed.
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const GH = store.get('dsp-gh', null) || { owner: 'nutiumihai-dot', repo: 'drumul-spre-partie-date', branch: 'main', token: '' };
+let QUEUE = store.get('dsp-queue', []);
+const FILES = {};
+const loadedMonths = new Set();
+const enc = s => { const b = new TextEncoder().encode(s); let bin = ''; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(bin); };
+const dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0)));
+const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
+function merge(base, patch) { const out = isObj(base) ? { ...base } : {}; for (const [k, v] of Object.entries(patch || {})) out[k] = isObj(v) ? merge(out[k], v) : v; return out; }
+class GhError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
+const cpath = p => p.split('/').map(encodeURIComponent).join('/');
+async function gh(path, opts = {}) {
+  try {
+    return await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${path}`, { cache: 'no-store', ...opts,
+      headers: { Authorization: `Bearer ${GH.token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opts.headers || {}) } });
+  } catch (e) { throw new GhError(0, 'offline'); }
+}
+async function readFile(path) {
+  const r = await gh(`/contents/${cpath(path)}?ref=${encodeURIComponent(GH.branch)}`);
+  if (r.status === 404) return (FILES[path] = { sha: null, data: null });
+  if (!r.ok) throw new GhError(r.status, await r.text());
+  const j = await r.json();
+  return (FILES[path] = { sha: j.sha, data: JSON.parse(dec(j.content)) });
+}
+async function putFile(path, b64, sha, message) {
+  const body = { message, content: b64, branch: GH.branch }; if (sha) body.sha = sha;
+  const r = await gh(`/contents/${cpath(path)}`, { method: 'PUT', body: JSON.stringify(body) });
+  if (!r.ok) throw new GhError(r.status, await r.text());
+  return r.json();
+}
+function errText(e) {
+  if (e?.status === 0) return 'Ești offline. Salvarea pleacă în GitHub când revine conexiunea.';
+  if (e?.status === 401 || e?.status === 403) return 'GitHub a refuzat accesul. Verifică tokenul în Profil.';
+  if (e?.status === 404) return 'Nu găsesc repo-ul de date. Verifică numele lui în Profil.';
+  return 'Salvarea nu a reușit. Încearcă din nou cu butonul de sincronizare.';
+}
+function applyLocal(op) {
+  if (op.file.startsWith('days/')) S.days[op.key] = merge(S.days[op.key], op.patch);
+  else if (op.file === 'favorites.json') S.favMap[op.key] = merge(S.favMap[op.key], op.patch);
+  else if (op.file === 'catalog.json') S.catalog[op.key] = merge(S.catalog[op.key], op.patch);
+  else if (op.file === 'config/profile.json') S.profile = merge(S.profile, op.patch);
+}
+let flushT, flushing = false;
+function queueOp(op) {
+  QUEUE.push(op); store.set('dsp-queue', QUEUE);
+  applyLocal(op); cacheSave(); S.sync = 'pending'; schedule();
+  clearTimeout(flushT); flushT = setTimeout(flush, 1500);
+}
+function commitMsg(file, ops) {
+  if (file.startsWith('days/')) return `Jurnal ${[...new Set(ops.map(o => o.key))].join(', ')}`;
+  return { 'favorites.json': 'Mese favorite', 'catalog.json': 'Notițe în catalog', 'config/profile.json': 'Profil' }[file] || `Actualizare ${file}`;
+}
+async function flush() {
+  if (flushing || !QUEUE.length || !GH.token) return;
+  flushing = true; S.sync = 'pending'; renderChrome();
+  try {
+    while (QUEUE.length) {
+      const file = QUEUE[0].file;
+      const ops = QUEUE.filter(o => o.file === file);
+      let done = false;
+      for (let attempt = 0; attempt < 3 && !done; attempt++) {
+        const f = await readFile(file);
+        let data = f.data || {};
+        ops.forEach(o => { data = o.key == null ? merge(data, o.patch) : { ...data, [o.key]: merge(data[o.key], o.patch) }; });
+        try {
+          const j = await putFile(file, enc(JSON.stringify(data, null, 1) + '\n'), f.sha, commitMsg(file, ops));
+          FILES[file] = { sha: j.content.sha, data }; done = true;
+        } catch (e) { if (e.status !== 409 && e.status !== 422) throw e; }
+      }
+      if (!done) throw new GhError(409, 'conflict');
+      QUEUE = QUEUE.filter(o => !ops.includes(o)); store.set('dsp-queue', QUEUE);
+    }
+    S.sync = 'ok';
+  } catch (e) {
+    S.sync = e.status === 0 ? 'offline' : 'error';
+    if (e.status !== 0) toast(errText(e));
+  }
+  flushing = false; renderChrome();
+}
+window.addEventListener('online', () => flush());
+function nest(path, value) {
+  const keys = path.split('.'); const out = {}; let o = out;
+  keys.forEach((k, i) => { if (i === keys.length - 1) o[k] = value; else { o[k] = {}; o = o[k]; } });
+  return out;
+}
+function saveDay(date, patch) {
+  if (!GH.token) { toast('Conectează întâi GitHub, din Profil.'); return Promise.resolve(); }
+  queueOp({ file: `days/${date.slice(0, 7)}.json`, key: date, patch: { date, ...patch } });
+  return Promise.resolve();
+}
+function saveTo(file, key, patch) { queueOp({ file, key, patch }); return Promise.resolve(); }
+
+function cacheSave() {
+  store.set('dsp-cache', { profile: S.profile, catalog: S.catalog, favMap: S.favMap, days: S.days, plans: S.plans, msgMap: S.msgMap, months: [...loadedMonths] });
+}
+function cacheLoad() {
+  const c = store.get('dsp-cache', null); if (!c) return false;
+  Object.assign(S, { profile: c.profile, catalog: c.catalog || {}, favMap: c.favMap || {}, days: c.days || {}, plans: c.plans || {}, msgMap: c.msgMap || {} });
+  derive(); S.ready.days = true; return true;
+}
+function derive() {
+  S.messages = Object.values(S.msgMap || {}).sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
+  S.favorites = Object.entries(S.favMap || {}).map(([id, f]) => ({ id, ...f }));
+}
+const monthsBetween = (a, b) => { const out = []; let m = a.slice(0, 7); const end = b.slice(0, 7); while (m <= end) { out.push(m); const [y, mm] = m.split('-').map(Number); m = mm === 12 ? `${y + 1}-01` : `${y}-${pad(mm + 1)}`; } return out; };
+async function loadJson(path) { return (await readFile(path)).data; }
+async function loadMonth(m) {
+  const [d, p, ms] = await Promise.all([`days/${m}.json`, `plan/${m}.json`, `messages/${m}.json`].map(loadJson));
+  Object.assign(S.days, d || {}); Object.assign(S.plans, p || {}); Object.assign(S.msgMap, ms || {});
+  loadedMonths.add(m);
+}
+async function ensureRange(from, to) {
+  const need = monthsBetween(from, to).filter(m => !loadedMonths.has(m));
+  if (!need.length || !GH.token) return;
+  try { await Promise.all(need.map(loadMonth)); QUEUE.forEach(applyLocal); derive(); cacheSave(); }
+  catch (e) { if (e.status !== 0) toast(errText(e)); }
+  schedule();
+}
+async function pull() {
+  if (!GH.token) { render(); return; }
+  S.sync = 'loading'; renderChrome();
+  try {
+    const [prof, cat, fav] = await Promise.all(['config/profile.json', 'catalog.json', 'favorites.json'].map(loadJson));
+    const t = today();
+    const months = monthsBetween(addDays(t, -40), addDays(t, 14));
+    if (!months.includes(S.date.slice(0, 7))) months.push(S.date.slice(0, 7));
+    const old = { days: S.days, plans: S.plans, msgMap: S.msgMap };
+    S.days = {}; S.plans = {}; S.msgMap = {}; loadedMonths.clear();
+    try { await Promise.all(months.map(loadMonth)); }
+    catch (e) { Object.assign(S, old); throw e; }
+    S.profile = prof; S.catalog = cat || {}; S.favMap = fav || {};
+    QUEUE.forEach(applyLocal); derive(); cacheSave();
+    S.ready.days = true; S.sync = QUEUE.length ? 'pending' : 'ok';
+  } catch (e) {
+    S.sync = e.status === 0 ? 'offline' : (e.status === 401 || e.status === 403 || e.status === 404) ? 'auth' : 'error';
+    if (e.status !== 0) toast(errText(e));
+  }
+  render(); flush();
+}
+
+/* ---------- photos ---------- */
+const PHOTO = {};
+async function photoURL(path) {
+  if (PHOTO[path]) return PHOTO[path];
+  const r = await gh(`/contents/${cpath(path)}?ref=${encodeURIComponent(GH.branch)}`, { headers: { Accept: 'application/vnd.github.raw+json' } });
+  if (!r.ok) throw new GhError(r.status, 'photo');
+  return (PHOTO[path] = URL.createObjectURL(await r.blob()));
+}
+function hydratePhotos(root = document) {
+  $$('img[data-photo]', root).forEach(async img => {
+    if (img.getAttribute('src')) return;
+    try { img.src = await photoURL(img.dataset.photo); } catch (e) { img.alt = 'Poza nu s-a putut încărca'; }
+  });
+}
+const thumb = p => `<button type="button" data-act="photo" data-path="${esc(p)}" aria-label="Deschide poza"><img data-photo="${esc(p)}" alt="Poză"></button>`;
+
+/* ---------- render scheduling ---------- */
+let pending = false;
+const editing = () => { const a = document.activeElement; return a && $('#view').contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'checkbox'; };
+function schedule() { if (editing()) { pending = true; return; } render(); }
+document.addEventListener('focusout', () => setTimeout(() => { if (pending && !editing()) { pending = false; render(); } }, 60));
+
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); }
+
+/* ---------- helpers ---------- */
+function currentPhase(d = today()) {
+  const ph = S.profile?.phases || [];
+  return ph.find(p => p.from <= d && d <= p.to) || null;
+}
+function scale(path, val, { min = 0, max = 10, knee = false } = {}) {
+  const n = max - min + 1;
+  let h = `<div class="scale" style="grid-template-columns:repeat(${n},1fr)">`;
+  for (let i = min; i <= max; i++) {
+    const on = val === i;
+    h += `<button type="button" data-act="set" data-path="${path}" data-val="${i}" aria-pressed="${on}" class="${knee ? kneeCls(i) : ''}">${i}</button>`;
+  }
+  return h + '</div>';
+}
+function q(label, path, val, opts) {
+  const hint = opts?.hint ? `<span class="muted small">${esc(opts.hint)}</span>` : '';
+  return `<div class="sec"><div class="qlabel"><span>${esc(label)}</span>${hint}</div>${scale(path, val, opts)}</div>`;
+}
+function rolling(dates, getter, win = 7) {
+  return dates.map(d => {
+    const vals = []; for (let i = 0; i < win; i++) { const v = getter(addDays(d, -i)); if (v != null) vals.push(v); }
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  });
+}
+function dayKcal(day) {
+  if (day?.coach?.kcal != null) return day.coach.kcal;
+  const ms = (day?.meals || []).filter(m => m.est?.kcal != null);
+  return ms.length ? ms.reduce((a, m) => a + m.est.kcal, 0) : null;
+}
+function dayProtein(day) {
+  if (day?.coach?.protein != null) return day.coach.protein;
+  const ms = (day?.meals || []).filter(m => m.est?.protein != null);
+  return ms.length ? ms.reduce((a, m) => a + m.est.protein, 0) : null;
+}
+function maxPain(day) {
+  const l = day?.log; if (!l) return null;
+  const v = [l.painDuring, l.painEvening, l.painMorning].filter(x => x != null);
+  return v.length ? Math.max(...v) : null;
+}
+
+/* ---------- header ---------- */
+function renderChrome() {
+  $$('#tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === S.tab ? 'page' : 'false'));
+  $('#datebar').hidden = !(S.tab === 'azi' || S.tab === 'mancare');
+  const t = today();
+  $('#dateLabel').textContent = S.date === t ? `Azi · ${fmtShort(t)}` : fmtDate(S.date);
+  const ph = currentPhase();
+  const sb = S.profile?.snowboard;
+  let meta = '';
+  if (ph) meta += `<span class="hpill">${esc(ph.name)}</span>`;
+  if (sb?.date) meta += `<span class="hpill hot"><b>${daysBetween(t, sb.date)}</b> zile până la pârtie</span>`;
+  if (GH.token) {
+    const n = QUEUE.length;
+    const st = { ok: '↻ Sincronizat', pending: `↻ Se salvează${n ? ` (${n})` : '…'}`, loading: '↻ Se încarcă…', offline: `Offline · ${n} în așteptare`, error: '↻ Eroare · reîncearcă', auth: 'Verifică tokenul' }[S.sync] || '↻';
+    meta += `<button class="hpill sync ${S.sync === 'error' || S.sync === 'auth' ? 'bad' : ''}" data-act="pull" title="Reîncarcă datele din GitHub">${st}</button>`;
+  }
+  $('#brandMeta').innerHTML = meta;
+}
+
+/* ---------- views ---------- */
+function render() {
+  renderChrome();
+  const v = $('#view');
+  if (!GH.token) { v.innerHTML = `<section class="card"><h2>Conectează-te la GitHub</h2><p>Jurnalele se salvează în repo-ul tău privat. Lipește aici tokenul creat în GitHub; rămâne salvat doar pe acest dispozitiv.</p>${ghForm()}</section>`; return; }
+  if (!S.ready.days) { v.innerHTML = `<div class="card flat"><p class="empty">${S.sync === 'loading' ? 'Se încarcă jurnalele din GitHub…' : 'Nu am putut încărca datele. Apasă butonul de sincronizare din antet.'}</p></div>`; return; }
+  v.innerHTML = ({ azi: viewAzi, mancare: viewFood, progres: viewProgress, calendar: viewCalendar, catalog: viewCatalog, profil: viewProfile }[S.tab] || viewAzi)();
+  hydratePhotos(v);
+}
+function ghForm() {
+  return `<div class="grid2">
+      <label class="f">Utilizator GitHub<input type="text" id="gh-owner" value="${esc(GH.owner)}" autocomplete="off"></label>
+      <label class="f">Repo de date<input type="text" id="gh-repo" value="${esc(GH.repo)}" autocomplete="off"></label>
+    </div>
+    <label class="f">Token<input type="password" id="gh-token" placeholder="${GH.token ? 'salvat pe acest dispozitiv' : 'github_pat_…'}" autocomplete="off"></label>
+    <div class="row"><button class="btn primary" data-act="gh-save">${GH.token ? 'Salvează conexiunea' : 'Conectează'}</button>${GH.token ? '<button class="btn danger" data-act="gh-forget">Șterge tokenul de pe dispozitiv</button>' : ''}</div>`;
+}
+
+function viewAzi() {
+  const d = S.date, day = S.days[d] || {}, t = today();
+  let h = '';
+
+  h += todayHero(d, day);
+  if (d === t) {
+    const m = S.messages[0];
+    if (m) h += `<section class="card"><div class="row between"><span class="eyebrow">Mesaj de la Claude · ${esc(fmtShort(m.date || t))}</span><button class="linkbtn small" data-act="msgs">Toate mesajele</button></div><div class="msg"><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></div></section>`;
+    const y = addDays(d, -1), yd = S.days[y];
+    if (yd?.log && yd.log.completed !== 'sarit' && yd.log.painMorning == null) {
+      h += `<section class="card setup"><span class="eyebrow">Dimineața de după antrenamentul de ieri</span>${q('Durere la genunchi acum', 'log.painMorning', null, { knee: true, hint: '0 = deloc' }).replace(/data-path="log\.painMorning"/g, `data-path="log.painMorning" data-date="${y}"`)}</section>`;
+    }
+  }
+
+  // day basics
+  h += `<section class="card"><h2>Ziua</h2>
+    <div class="grid2">
+      <label class="f">Tipul zilei<select data-path="kind">${KINDS.map(([k, l]) => `<option value="${k}" ${day.kind === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="f">Greutate (kg)<input type="text" inputmode="decimal" data-path="weight" data-type="num" value="${day.weight ?? ''}" placeholder="ex. 87,6"></label>
+      <label class="f">Pași<input type="text" inputmode="numeric" data-path="steps" data-type="num" value="${day.steps ?? ''}" placeholder="din Google Fit"></label>
+      <label class="f">Somn (ore)<input type="text" inputmode="decimal" data-path="sleepHours" data-type="num" value="${day.sleepHours ?? ''}" placeholder="ex. 7,5"></label>
+    </div>
+    ${q('Cât de greu te-ai trezit', 'wake', day.wake ?? null, { min: 1, max: 5, hint: '1 = ușor · 5 = foarte greu' })}
+    <label class="done-line"><input type="checkbox" data-path="party" data-type="bool" ${day.party ? 'checked' : ''}> Party / ieșire cu băutură în seara asta</label>
+  </section>`;
+
+  // workout
+  const plan = S.plans[d];
+  const useFb = S.fallback[d] || day.log?.completed === 'minim';
+  const session = useFb ? S.profile?.fallback : plan;
+  const hasBlocks = session?.blocks?.length;
+  if (session && (hasBlocks || session.notes)) {
+    h += sessionHTML(session, day, useFb);
+  } else {
+    h += `<section class="card flat"><h2>Niciun antrenament planificat</h2><p class="muted">${plan?.notes ? '' : 'Planul pentru ziua asta apare după generarea săptămânii.'}</p></section>`;
+  }
+  if (useFb && plan?.blocks?.length) h += `<button class="btn ghost" data-act="fallback">Înapoi la antrenamentul planificat</button>`;
+  else if (!useFb && S.profile?.fallback) h += `<button class="btn" data-act="fallback">${plan?.blocks?.length ? 'Nu am timp sau chef azi: varianta minimă (15–20 min)' : 'Fă varianta minimă (15–20 min)'}</button>`;
+
+  // outdoor
+  if (day.kind === 'afara' || plan?.code === 'AFARĂ' || day.outdoor) h += outdoorHTML(day);
+
+  // feedback
+  if (hasBlocks || day.log) h += feedbackHTML(day);
+  return h;
+}
+
+const SESS = { A: 'var(--c-a)', B: 'var(--c-b)', C: 'var(--c-c)', D: 'var(--c-d)', 'AFARĂ': 'var(--c-out)' };
+function loggedSomething(day) { return !!day && (day.weight != null || day.steps != null || (day.meals || []).length || day.log?.completed || day.outdoor); }
+function streak() {
+  let d = today(); if (!loggedSomething(S.days[d])) d = addDays(d, -1);
+  let n = 0; while (loggedSomething(S.days[d])) { n++; d = addDays(d, -1); }
+  return n;
+}
+function todayHero(d, day) {
+  const plan = S.plans[d];
+  const checks = [
+    ['Greutate', day.weight != null],
+    ['Pași', day.steps != null],
+    ['Mese', (day.meals || []).length >= 2],
+    [plan?.blocks?.length ? 'Antrenament' : 'Mișcare', !!(day.log?.completed && day.log.completed !== 'sarit') || !!day.outdoor]
+  ];
+  const done = checks.filter(c => c[1]).length;
+  const C = 2 * Math.PI * 40, off = C * (1 - done / checks.length);
+  const st = streak();
+  return `<section class="card"><div class="today-hero">
+    <div class="ring"><svg viewBox="0 0 92 92"><circle class="trk" cx="46" cy="46" r="40"/><circle class="val" cx="46" cy="46" r="40" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg><div class="lbl"><b>${done}/${checks.length}</b><span>bifate</span></div></div>
+    <div class="sec"><div class="checks">${checks.map(([n, on]) => `<span class="${on ? 'on' : ''}"><i>${on ? '✓' : ''}</i>${n}</span>`).join('')}</div>
+    <div class="streak"><b>${st}</b> ${st === 1 ? 'zi' : 'zile'} la rând cu jurnalul completat</div></div>
+  </div></section>`;
+}
+function sessionHTML(p, day, isFb) {
+  const col = SESS[p.code] || 'var(--accent)';
+  let h = `<section class="card session-head" style="--sess:${col}"><span class="code" aria-hidden="true">${esc(isFb ? 'MIN' : (p.code === 'AFARĂ' ? '' : p.code || ''))}</span><div class="row between"><span class="eyebrow">${esc(p.phase || (isFb ? 'Varianta minimă' : ''))}</span>${p.durationMin ? `<span class="pill">~${p.durationMin} min</span>` : ''}</div><h2>${esc(p.title || 'Antrenament')}</h2>${p.coachNote ? `<p class="muted">${esc(p.coachNote)}</p>` : ''}</section>`;
+  if (p.setup?.length) h += `<section class="card setup"><span class="eyebrow">Asamblează înainte de start</span><ul>${p.setup.map(s => `<li>${esc(s)}</li>`).join('')}</ul></section>`;
+  if (p.notes?.length) h += `<section class="card info"><ul>${p.notes.map(s => `<li>${esc(s)}</li>`).join('')}</ul></section>`;
+  (p.blocks || []).forEach(b => {
+    if (b.type === 'swap') {
+      h += `<section class="card swap"><h2>${esc(b.title || 'Schimbul de discuri')}</h2><ol>${(b.steps || []).map(s => `<li>${esc(s)}</li>`).join('')}</ol>${b.note ? `<p class="note">${esc(b.note)}</p>` : ''}</section>`;
+      return;
+    }
+    h += `<section class="card" style="--sess:${col}"><div class="block-head"><h3>${esc(b.title)}</h3>${b.minutes ? `<span class="muted small">${b.minutes} min</span>` : ''}</div>${b.note ? `<p class="note">${esc(b.note)}</p>` : ''}`;
+    (b.items || []).forEach(it => h += itemHTML(it, day));
+    h += `</section>`;
+  });
+  return h;
+}
+
+function itemHTML(it, day) {
+  const name = it.name || S.catalog[it.ex]?.name || it.ex;
+  const pills = [];
+  if (it.sets) pills.push(`${it.sets} × ${esc(it.reps || '')}`); else if (it.dose) pills.push(esc(it.dose));
+  if (it.load) pills.push(`<span class="pill load">${esc(it.load)}</span>`);
+  if (it.tempo) pills.push(`tempo ${esc(it.tempo)}`);
+  if (it.rest) pills.push(`pauză ${esc(it.rest)}`);
+  let h = `<div class="ex" data-exwrap="${esc(it.ex)}"><button class="ex-name" data-act="ex" data-ex="${esc(it.ex)}">${esc(name)}</button>
+    <div class="ex-meta">${pills.map(p => p.startsWith('<span') ? p : `<span class="pill">${p}</span>`).join('')}</div>
+    ${it.note ? `<p class="note">${esc(it.note)}</p>` : ''}`;
+  if (it.sets) {
+    const logged = day.log?.sets?.[it.ex] || [];
+    const hasKg = it.kg != null;
+    for (let i = 0; i < it.sets; i++) {
+      const s = logged[i] || {};
+      h += `<div class="setrow ${hasKg ? '' : 'nokg'}"><span class="sn">S${i + 1}</span>
+        ${hasKg ? `<input type="text" inputmode="decimal" aria-label="kg seria ${i + 1}" data-set="${esc(it.ex)}" data-i="${i}" data-f="kg" value="${s.kg ?? ''}" placeholder="${it.kg} kg">` : ''}
+        <input type="text" inputmode="numeric" aria-label="repetări seria ${i + 1}" data-set="${esc(it.ex)}" data-i="${i}" data-f="reps" value="${s.reps ?? ''}" placeholder="${esc(String(it.reps || 'rep').split(/[–-]/).pop())} rep">
+        <span class="chk"><input type="checkbox" aria-label="seria ${i + 1} făcută" data-set="${esc(it.ex)}" data-i="${i}" data-f="done" ${s.done ? 'checked' : ''}></span></div>`;
+    }
+  } else {
+    const done = day.log?.done?.[it.ex];
+    h += `<label class="done-line"><input type="checkbox" data-path="log.done.${esc(it.ex)}" data-type="bool" ${done ? 'checked' : ''}> Făcut</label>`;
+  }
+  return h + `</div>`;
+}
+
+function feedbackHTML(day) {
+  const l = day.log || {};
+  const done = [['complet', 'Complet'], ['partial', 'Parțial'], ['minim', 'Varianta minimă'], ['sarit', 'Sărit']];
+  let h = `<section class="card"><h2>Cum a mers</h2>
+    <div class="chips">${done.map(([k, n]) => `<button class="chip" data-act="set" data-path="log.completed" data-val="${k}" data-str="1" aria-pressed="${l.completed === k}">${n}</button>`).join('')}</div>`;
+  if (l.completed === 'sarit') {
+    h += `<div class="sec"><span class="qlabel">De ce?</span><div class="chips">${SKIP.map(s => `<button class="chip" data-act="set" data-path="log.skipReason" data-val="${esc(s)}" data-str="1" aria-pressed="${l.skipReason === s}">${s}</button>`).join('')}</div></div>`;
+  } else {
+    h += q('Efort perceput (RPE)', 'log.rpe', l.rpe ?? null, { min: 1, max: 10, hint: '10 = maxim' });
+    h += q('Durere la genunchi în timpul antrenamentului', 'log.painDuring', l.painDuring ?? null, { knee: true });
+    h += q('Durere la genunchi seara', 'log.painEvening', l.painEvening ?? null, { knee: true });
+    h += q('Durere a doua zi dimineață', 'log.painMorning', l.painMorning ?? null, { knee: true });
+    h += q('Rigiditate', 'log.stiffness', l.stiffness ?? null, {});
+    h += q('Energie', 'log.energy', l.energy ?? null, { min: 1, max: 5, hint: '1 = zero · 5 = plin' });
+    h += `<label class="done-line"><input type="checkbox" data-path="log.swelling" data-type="bool" ${l.swelling ? 'checked' : ''}> Genunchiul s-a umflat</label>
+      <label class="f">Disconfort la sprijin sau la un exercițiu anume<input type="text" data-path="log.kneeling" value="${esc(l.kneeling || '')}" placeholder="ex. pe genunchi la planșă"></label>`;
+  }
+  h += `<label class="f">Notițe<textarea data-path="log.notes" placeholder="orice merită știut">${esc(l.notes || '')}</textarea></label></section>`;
+  return h;
+}
+
+function outdoorHTML(day) {
+  const o = day.outdoor || {};
+  return `<section class="card"><h2>Ieșire afară</h2>
+    <div class="grid2">
+      <label class="f">Tip<select data-path="outdoor.type">${OUT.map(([k, n]) => `<option value="${k}" ${o.type === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <label class="f">Durată (min)<input type="text" inputmode="numeric" data-path="outdoor.minutes" data-type="num" value="${o.minutes ?? ''}"></label>
+      <label class="f">Distanță (km)<input type="text" inputmode="decimal" data-path="outdoor.km" data-type="num" value="${o.km ?? ''}"></label>
+      <label class="f">Urcare (m)<input type="text" inputmode="numeric" data-path="outdoor.up" data-type="num" value="${o.up ?? ''}"></label>
+      <label class="f">Coborâre (m)<input type="text" inputmode="numeric" data-path="outdoor.down" data-type="num" value="${o.down ?? ''}"></label>
+    </div>
+    ${q('Durere la genunchi la coborâre', 'outdoor.kneeDown', o.kneeDown ?? null, { knee: true })}
+    <label class="f">Notițe<textarea data-path="outdoor.notes">${esc(o.notes || '')}</textarea></label>
+    ${photosHTML(o.photos, 'outdoor')}
+  </section>`;
+}
+
+function photosHTML(ids, target) {
+  const th = (ids || []).map(thumb).join('');
+  const up = `<label class="btn sm"><input type="file" accept="image/*" multiple hidden data-upload="${target}">Adaugă poze sau capturi</label>`;
+  return `<div class="sec">${th ? `<div class="thumbs">${th}</div>` : ''}${up}</div>`;
+}
+
+/* ---------- food ---------- */
+function viewFood() {
+  const d = S.date, day = S.days[d] || {}, tg = S.profile?.targets || {};
+  const kcal = dayKcal(day), prot = dayProtein(day);
+  const kHi = tg.kcal?.[1] || 2050, pLo = tg.protein?.[0] || 150;
+  const meals = [...(day.meals || [])].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  let h = `<section class="card"><div class="row between"><h2>Total zi</h2><span class="muted small">ținta ${fmtN(tg.kcal?.[0], 0)}–${fmtN(kHi, 0)} kcal · ${fmtN(pLo, 0)}+ g proteine</span></div>
+    <div class="totals">
+      <div class="meter"><span class="eyebrow">Calorii</span><span class="v">${kcal == null ? '–' : fmtN(kcal, 0)}</span><div class="bar"><span style="width:${Math.min(100, (kcal || 0) / kHi * 100)}%"></span></div></div>
+      <div class="meter p"><span class="eyebrow">Proteine (g)</span><span class="v">${prot == null ? '–' : fmtN(prot, 0)}</span><div class="bar"><span style="width:${Math.min(100, (prot || 0) / pLo * 100)}%"></span></div></div>
+    </div>
+    ${kcal == null && meals.length ? `<p class="muted small">Estimarea apare după procesarea de seară (21:30).</p>` : ''}
+    ${day.coach?.foodNote ? `<div class="msg"><p class="pre">${esc(day.coach.foodNote)}</p></div>` : ''}
+  </section>
+  <div class="row"><button class="btn primary" data-act="meal-new">+ Adaugă masă</button><button class="btn" data-act="meal-fav">Din favorite</button></div>`;
+  if (!meals.length) h += `<section class="card flat"><p class="empty">Nicio masă notată în ziua asta. Scrie ce ai mâncat și cam cât; caloriile le estimează Claude.</p></section>`;
+  else {
+    h += `<section class="card">`;
+    meals.forEach(m => {
+      const typ = MEALT.find(x => x[0] === m.type)?.[1] || m.type;
+      const src = SRC.find(x => x[0] === m.source)?.[1] || '';
+      h += `<div class="meal"><div class="row between"><strong>${esc(typ)}${m.time ? ` · ${esc(m.time)}` : ''}</strong><span class="muted small">${esc(src)}${m.place ? ` · ${esc(m.place)}` : ''}</span></div>
+        <ul>${(m.items || []).map(i => `<li>${esc(i.name)}${i.brand ? ` <span class="muted">(${esc(i.brand)})</span>` : ''}${i.qty ? ` · ${esc(i.qty)}` : ''}${i.prep ? ` · ${esc(i.prep)}` : ''}</li>`).join('')}</ul>
+        ${m.notes ? `<p class="note">${esc(m.notes)}</p>` : ''}
+        ${m.photos?.length ? `<div class="thumbs">${m.photos.map(thumb).join('')}</div>` : ''}
+        ${m.est ? `<div class="ex-meta"><span class="pill load">~${fmtN(m.est.kcal, 0)} kcal</span><span class="pill">~${fmtN(m.est.protein, 0)} g proteine</span></div>` : ''}
+        ${m.est?.note ? `<p class="note">${esc(m.est.note)}</p>` : ''}
+        <div class="row">${S.confirm === m.id
+          ? `<span class="small">Ștergi masa?</span><button class="btn sm danger" data-act="meal-del" data-id="${m.id}">Da, șterge</button><button class="btn sm ghost" data-act="cancel">Nu</button>`
+          : `<button class="btn sm" data-act="meal-edit" data-id="${m.id}">Editează</button><button class="btn sm ghost" data-act="meal-star" data-id="${m.id}">Salvează ca favorit</button><button class="btn sm ghost" data-act="ask-del" data-id="${m.id}">Șterge</button>`}</div>
+      </div>`;
+    });
+    h += `</section>`;
+  }
+  return h;
+}
+
+function mealSheet(meal, isNew) {
+  const m = JSON.parse(JSON.stringify(meal));
+  m.items = m.items?.length ? m.items : [{ name: '', brand: '', qty: '', prep: '' }];
+  m.photos = m.photos || [];
+  const places = [...new Set(Object.values(S.days).flatMap(d => (d.meals || []).map(x => x.place).filter(Boolean)))];
+  const draw = () => {
+    const p = $('#sheetPanel');
+    p.innerHTML = `<div class="sheet-head"><h2>${isNew ? 'Masă nouă' : 'Editează masa'}</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+      <div class="grid2">
+        <label class="f">Masa<select id="m-type">${MEALT.map(([k, n]) => `<option value="${k}" ${m.type === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+        <label class="f">Ora<input type="time" id="m-time" value="${esc(m.time || '')}"></label>
+        <label class="f">Sursa<select id="m-src">${SRC.map(([k, n]) => `<option value="${k}" ${m.source === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+        <label class="f">Locul (restaurant)<input type="text" id="m-place" list="m-places" value="${esc(m.place || '')}" placeholder="opțional"></label>
+      </div>
+      <datalist id="m-places">${places.map(p => `<option value="${esc(p)}">`).join('')}</datalist>
+      <span class="eyebrow">Ce ai mâncat</span>
+      ${m.items.map((it, i) => `<div class="item-row" data-row="${i}">
+        <label class="f full">Aliment / fel<input type="text" data-k="name" value="${esc(it.name)}" placeholder="ex. ouă ochiuri"></label>
+        <label class="f">Cantitate<input type="text" data-k="qty" value="${esc(it.qty)}" placeholder="ex. 2 buc, 200 g"></label>
+        <label class="f">Brand<input type="text" data-k="brand" value="${esc(it.brand)}" placeholder="opțional"></label>
+        <label class="f">Preparare<select data-k="prep">${PREP.map(p => `<option value="${p}" ${it.prep === p ? 'selected' : ''}>${p || '—'}</option>`).join('')}</select></label>
+        <div class="row" style="align-self:end"><button class="btn sm ghost" data-rm="${i}">Scoate</button></div>
+      </div>`).join('')}
+      <button class="btn sm" id="m-add">+ Încă un aliment</button>
+      <div class="grid2">
+        <label class="f">Foame înainte (1–5)<select id="m-hunger">${['', 1, 2, 3, 4, 5].map(v => `<option value="${v}" ${m.hunger == v && v !== '' ? 'selected' : ''}>${v || '—'}</option>`).join('')}</select></label>
+        <label class="f">Sătul după (1–5)<select id="m-full">${['', 1, 2, 3, 4, 5].map(v => `<option value="${v}" ${m.fullness == v && v !== '' ? 'selected' : ''}>${v || '—'}</option>`).join('')}</select></label>
+      </div>
+      <label class="f">Notițe<textarea id="m-notes" placeholder="ex. porție mare, am lăsat jumătate din cartofi">${esc(m.notes || '')}</textarea></label>
+      <div class="sec">${m.photos.length ? `<div class="thumbs">${m.photos.map(p => `<img data-photo="${esc(p)}" alt="Poză masă">`).join('')}</div>` : ''}
+        <label class="btn sm"><input type="file" accept="image/*" multiple hidden id="m-photos">Poză farfurie, etichetă sau captură Glovo</label></div>
+      <div class="row"><button class="btn primary" id="m-save">Salvează masa</button><button class="btn ghost" data-act="close">Renunță</button></div>`;
+    $('#m-add').onclick = () => { collect(); m.items.push({ name: '', brand: '', qty: '', prep: '' }); draw(); };
+    $$('[data-rm]', p).forEach(b => b.onclick = () => { collect(); m.items.splice(+b.dataset.rm, 1); if (!m.items.length) m.items.push({ name: '', brand: '', qty: '', prep: '' }); draw(); });
+    hydratePhotos(p);
+    const ph = $('#m-photos'); if (ph) ph.onchange = async () => { collect(); const ids = await uploadFiles(ph.files); m.photos.push(...ids); draw(); };
+    $('#m-save').onclick = async () => {
+      collect();
+      m.items = m.items.filter(i => i.name.trim());
+      if (!m.items.length && !m.photos.length) { toast('Adaugă cel puțin un aliment sau o poză.'); return; }
+      const list = [...(S.days[S.date]?.meals || [])];
+      const i = list.findIndex(x => x.id === m.id);
+      if (i >= 0) { if (JSON.stringify(list[i].items) !== JSON.stringify(m.items)) delete m.est; list[i] = m; } else list.push(m);
+      closeSheet(); await saveDay(S.date, { meals: list }); toast('Masa a fost salvată.');
+    };
+  };
+  const collect = () => {
+    m.type = $('#m-type').value; m.time = $('#m-time').value; m.source = $('#m-src').value; m.place = $('#m-place').value.trim();
+    m.hunger = toNum($('#m-hunger').value); m.fullness = toNum($('#m-full').value); m.notes = $('#m-notes').value.trim();
+    m.items = $$('#sheetPanel [data-row]').map(r => { const o = {}; $$('[data-k]', r).forEach(x => o[x.dataset.k] = x.value.trim()); return o; });
+  };
+  openSheet(); draw();
+}
+function defaultMealType() { const h = new Date().getHours(); return h < 11 ? 'mic-dejun' : h < 16 ? 'pranz' : h < 22 ? 'cina' : 'gustare'; }
+function nowTime() { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+
+function favSheet() {
+  openSheet();
+  const p = $('#sheetPanel');
+  p.innerHTML = `<div class="sheet-head"><h2>Mese favorite</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+    ${S.favorites.length ? S.favorites.map(f => `<div class="card"><div class="row between"><strong>${esc(f.name)}</strong><button class="btn sm primary" data-fav="${f.id}">Adaugă azi</button></div><p class="muted small">${esc((f.items || []).map(i => i.name + (i.qty ? ' ' + i.qty : '')).join(' · '))}</p></div>`).join('')
+      : `<p class="empty">Nu ai încă favorite. La o masă salvată apasă „Salvează ca favorit”.</p>`}`;
+  $$('[data-fav]', p).forEach(b => b.onclick = () => {
+    const f = S.favorites.find(x => x.id === b.dataset.fav);
+    mealSheet({ id: uid(), type: f.type || defaultMealType(), time: nowTime(), source: f.source || 'acasa', place: f.place || '', items: f.items || [] }, true);
+  });
+}
+function starSheet(meal) {
+  openSheet();
+  const p = $('#sheetPanel');
+  const def = (meal.items || []).map(i => i.name).slice(0, 3).join(', ');
+  p.innerHTML = `<div class="sheet-head"><h2>Salvează ca favorit</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+    <label class="f">Nume<input type="text" id="f-name" value="${esc(def)}"></label>
+    <div class="row"><button class="btn primary" id="f-save">Salvează</button></div>`;
+  $('#f-save').onclick = async () => {
+    const id = uid(); closeSheet();
+    await saveTo('favorites.json', id, { name: $('#f-name')?.value?.trim() || def, type: meal.type, source: meal.source, place: meal.place || '', items: meal.items || [] });
+    toast('Adăugat la favorite.');
+  };
+}
+
+/* ---------- progress ---------- */
+function svgChart(o) {
+  const W = 640, H = o.h || 190, L = 44, R = 10, T = 12, B = 26;
+  const n = o.dates.length;
+  let vals = o.series.flatMap(s => s.values.filter(v => v != null));
+  if (!vals.length) return `<p class="empty">Nu sunt date încă în intervalul ales.</p>`;
+  if (o.band) vals = vals.concat(o.band);
+  let lo = o.yMin ?? Math.min(...vals), hi = o.yMax ?? Math.max(...vals);
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const pv = (hi - lo) * 0.08; if (o.yMin == null) lo -= pv; if (o.yMax == null) hi += pv;
+  const xc = i => L + (i + 0.5) * (W - L - R) / n;
+  const y = v => T + (hi - v) * (H - T - B) / (hi - lo);
+  let g = '';
+  for (let k = 0; k <= 4; k++) { const v = lo + (hi - lo) * k / 4; g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fmtN(v, o.dec ?? 0)}</text>`; }
+  if (o.band) g += `<rect class="band" x="${L}" width="${W - L - R}" y="${y(o.band[1])}" height="${Math.max(1, y(o.band[0]) - y(o.band[1]))}"/>`;
+  const step = Math.max(1, Math.ceil(n / 6));
+  for (let i = 0; i < n; i += step) g += `<text x="${xc(i)}" y="${H - 8}" text-anchor="middle">${fmtShort(o.dates[i])}</text>`;
+  const bw = Math.max(2, (W - L - R) / n * 0.62);
+  o.series.forEach(s => {
+    if (s.type === 'bars') s.values.forEach((v, i) => { if (v != null) g += `<rect class="${s.cls || 'bar'}" x="${xc(i) - bw / 2}" width="${bw}" y="${y(v)}" height="${Math.max(0, y(Math.max(lo, 0)) - y(v))}" rx="1.5"/>`; });
+    if (s.type === 'dots') s.values.forEach((v, i) => { if (v != null) g += `<circle class="${s.clsFn ? s.clsFn(v, i) : (s.cls || 'dot')}" cx="${xc(i)}" cy="${y(v)}" r="${s.r || 3.5}"/>`; });
+    if (s.type === 'line') { let d = '', pen = false; s.values.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${xc(i).toFixed(1)},${y(v).toFixed(1)}`; pen = true; }); g += `<path class="${s.cls || 'line'}" d="${d}"/>`; }
+  });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label || 'grafic')}">${g}</svg>`;
+}
+function viewProgress() {
+  const t = today();
+  const all = Object.keys(S.days).sort();
+  const first = all[0] || t;
+  const span = S.range === 0 ? Math.max(7, daysBetween(first, t) + 1) : S.range;
+  const dates = []; for (let i = span - 1; i >= 0; i--) dates.push(addDays(t, -i));
+  const D = d => S.days[d] || {};
+  const w = dates.map(d => D(d).weight ?? null);
+  const wAvg = rolling(dates, d => D(d).weight ?? null);
+  const steps = dates.map(d => D(d).steps ?? null);
+  const kcal = dates.map(d => dayKcal(D(d)));
+  const pain = dates.map(d => maxPain(D(d)));
+  const last7 = []; for (let i = 0; i < 7; i++) last7.push(addDays(t, -i));
+  const avg = arr => { const v = arr.filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const curAvg = rolling([t], d => D(d).weight ?? null)[0];
+  const start = S.profile?.startWeight;
+  const workouts = last7.filter(d => ['complet', 'partial', 'minim'].includes(D(d).log?.completed)).length;
+  const tg = S.profile?.targets || {};
+  const rng = [[30, '30 zile'], [90, '90 zile'], [0, 'Tot']];
+  return `<div class="chips">${rng.map(([v, n]) => `<button class="chip" data-act="range" data-v="${v}" aria-pressed="${S.range === v}">${n}</button>`).join('')}</div>
+  <div class="tiles">
+    <div class="tile"><span class="eyebrow">Greutate, medie 7 zile</span><span class="v">${fmtN(curAvg)} kg</span><span class="muted small">${start && curAvg ? `${curAvg - start <= 0 ? '−' : '+'}${fmtN(Math.abs(curAvg - start))} kg de la start (${fmtN(start)})` : 'cântărește-te dimineața'}</span></div>
+    <div class="tile" style="--tile:var(--warn)"><span class="eyebrow">Calorii, medie 7 zile</span><span class="v">${fmtN(avg(last7.map(d => dayKcal(D(d)))), 0)}</span><span class="muted small">ținta ${fmtN(tg.kcal?.[0], 0)}–${fmtN(tg.kcal?.[1], 0)}</span></div>
+    <div class="tile" style="--tile:var(--ice)"><span class="eyebrow">Pași, medie 7 zile</span><span class="v">${fmtN(avg(last7.map(d => D(d).steps ?? null)), 0)}</span><span class="muted small">${tg.steps ? `ținta ${fmtN(tg.steps, 0)}` : 'săptămâna de măsurare'}</span></div>
+    <div class="tile" style="--tile:var(--ok)"><span class="eyebrow">Antrenamente, 7 zile</span><span class="v">${workouts}</span><span class="muted small">inclusiv varianta minimă</span></div>
+  </div>
+  <section class="card"><h2>Greutate</h2><div class="legend"><span><i style="background:var(--muted);border-radius:50%"></i>cântărire</span><span><i style="background:var(--accent)"></i>medie 7 zile</span></div>
+    ${svgChart({ dates, label: 'Greutate', dec: 1, series: [{ type: 'dots', values: w, r: 3 }, { type: 'line', values: wAvg }] })}</section>
+  <section class="card"><h2>Calorii estimate</h2><div class="legend"><span><i style="background:var(--accent)"></i>kcal pe zi</span><span><i style="background:var(--accent-soft)"></i>intervalul țintă</span></div>
+    ${svgChart({ dates, label: 'Calorii', yMin: 0, band: tg.kcal, series: [{ type: 'bars', values: kcal }] })}</section>
+  <section class="card"><h2>Pași</h2>${svgChart({ dates, label: 'Pași', yMin: 0, series: [{ type: 'bars', values: steps, cls: 'bar-ice' }] })}</section>
+  <section class="card"><h2>Genunchi</h2><div class="legend"><span><i style="background:var(--ok)"></i>0–3</span><span><i style="background:var(--warn)"></i>4–5</span><span><i style="background:var(--bad)"></i>peste 5</span></div>
+    ${svgChart({ dates, label: 'Durere maximă genunchi', yMin: 0, yMax: 10, h: 150, series: [{ type: 'dots', values: pain, r: 4.5, clsFn: v => v <= 3 ? 'd-ok' : v <= 5 ? 'd-warn' : 'd-bad' }] })}
+    <p class="muted small">Cea mai mare valoare notată în ziua antrenamentului: în timpul lui, seara sau a doua zi dimineață.</p></section>`;
+}
+
+/* ---------- calendar ---------- */
+function mondayOf(s) { const d = parse(s); const k = (d.getDay() + 6) % 7; return addDays(s, -k); }
+function viewCalendar() {
+  const t = today();
+  const start = S.calStart || mondayOf(t);
+  let h = `<div class="row between"><button class="btn sm" data-act="cal" data-n="-7">‹ Săpt. anterioară</button><button class="btn sm" data-act="cal" data-n="7">Săpt. următoare ›</button></div>`;
+  for (let w = 0; w < 2; w++) {
+    const ws = addDays(start, w * 7);
+    h += `<section class="card"><h3>Săptămâna ${fmtShort(ws)} – ${fmtShort(addDays(ws, 6))}</h3><div class="cal">`;
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(ws, i), day = S.days[d] || {}, p = S.plans[d], dt = parse(d);
+      const c = day.log?.completed;
+      const st = c === 'complet' || c === 'partial' ? `<span class="status ok">${c === 'complet' ? 'Făcut' : 'Parțial'}</span>` : c === 'minim' ? `<span class="status min">Minim</span>` : c === 'sarit' ? `<span class="status skip">Sărit</span>` : '';
+      h += `<div class="calday ${d === t ? 'today' : ''}"><div class="dn" style="--sess:${p ? SESS[p.code] || 'var(--accent)' : 'transparent'}"><small>${ZS[dt.getDay()]}</small>${dt.getDate()}</div><div class="calbody">
+        <div class="row">${p ? `<button class="linkbtn" data-act="goto" data-date="${d}">${esc(p.title)}</button>` : `<span class="muted small">fără plan</span>`}${st}${day.party ? '<span class="status">party</span>' : ''}</div>
+        <select data-cal="${d}" aria-label="Tipul zilei ${fmtShort(d)}">${KINDS.map(([k, l]) => `<option value="${k}" ${day.kind === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      </div></div>`;
+    }
+    h += `</div></section>`;
+  }
+  h += `<p class="muted small">Marchează din timp zilele de afară, kineto sau indisponibile; programul săptămânii se generează după ele.</p>`;
+  return h;
+}
+
+/* ---------- catalog ---------- */
+function viewCatalog() {
+  const items = Object.entries(S.catalog).map(([id, c]) => ({ id, ...c })).sort((a, b) => (a.group || '').localeCompare(b.group || '') || a.name.localeCompare(b.name));
+  if (!items.length) return `<section class="card flat"><p class="empty">Catalogul se completează automat: fiecare exercițiu nou din plan primește o fișă.</p></section>`;
+  const groups = {}; items.forEach(i => (groups[i.group || 'Altele'] ||= []).push(i));
+  let h = `<input type="search" id="catSearch" placeholder="Caută exercițiu (${items.length} în catalog)" aria-label="Caută exercițiu">`;
+  Object.entries(groups).forEach(([g, list]) => {
+    h += `<section class="card" data-catgroup><h3>${esc(g)}</h3><div>${list.map(i => `<button class="cat-item" data-act="ex" data-ex="${esc(i.id)}" data-name="${esc((i.name + ' ' + (i.equipment || '')).toLowerCase())}"><span>${esc(i.name)}</span><span class="muted small">${esc(i.equipment || '')}</span></button>`).join('')}</div></section>`;
+  });
+  return h;
+}
+function exSheet(id) {
+  const c = S.catalog[id];
+  openSheet();
+  const p = $('#sheetPanel');
+  if (!c) { p.innerHTML = `<div class="sheet-head"><h2>Fișă în lucru</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div><p>Fișa pentru acest exercițiu apare la următoarea procesare.</p>`; return; }
+  const list = (arr, tag = 'ul') => arr?.length ? `<${tag}>${arr.map(x => `<li>${esc(x)}</li>`).join('')}</${tag}>` : '';
+  p.innerHTML = `<div class="sheet-head"><div><span class="eyebrow">${esc(c.group || '')}${c.equipment ? ' · ' + esc(c.equipment) : ''}</span><h2>${esc(c.name)}</h2></div><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+    ${c.purpose ? `<p>${esc(c.purpose)}</p>` : ''}
+    ${c.steps?.length ? `<div class="sec"><h3>Execuție</h3>${list(c.steps, 'ol')}</div>` : ''}
+    ${c.cues?.length ? `<div class="sec"><h3>Verifică forma</h3>${list(c.cues)}</div>` : ''}
+    ${c.mistakes?.length ? `<div class="sec"><h3>Greșeli frecvente</h3>${list(c.mistakes)}</div>` : ''}
+    ${c.knee ? `<div class="sec knee"><strong>Pentru genunchiul tău</strong><p>${esc(c.knee)}</p></div>` : ''}
+    ${c.alternative ? `<div class="sec"><h3>Dacă doare sau nu merge</h3><p>${esc(c.alternative)}</p></div>` : ''}
+    ${c.video ? `<a class="btn" href="https://www.youtube.com/results?search_query=${encodeURIComponent(c.video)}" target="_blank" rel="noopener">Caută video pe YouTube ↗</a>` : ''}
+    <label class="f">Notițele tale<textarea id="exNotes" placeholder="ex. la 14 kg simt umărul stâng">${esc(c.userNotes || '')}</textarea></label>
+    <div class="row"><button class="btn primary" id="exSave">Salvează notițele</button></div>`;
+  $('#exSave').onclick = async () => { await saveTo('catalog.json', id, { userNotes: $('#exNotes').value.trim() }); toast('Notițele au fost salvate.'); };
+}
+
+/* ---------- profile ---------- */
+function viewProfile() {
+  const p = S.profile;
+  if (!p) return `<section class="card flat"><p class="empty">Profilul apare imediat ce îl încarcă Claude.</p></section>`;
+  const t = today();
+  const tg = p.targets || {};
+  let h = `<section class="card"><h2>Obiective</h2><dl class="kv">
+    <dt>Start</dt><dd>${fmtN(p.startWeight)} kg · ${p.heightCm} cm · ${p.age} ani · ${p.startDate ? fmtShort(p.startDate) : ''}</dd>
+    <dt>Calorii</dt><dd>${fmtN(tg.kcal?.[0], 0)}–${fmtN(tg.kcal?.[1], 0)} kcal/zi</dd>
+    <dt>Proteine</dt><dd>${fmtN(tg.protein?.[0], 0)}–${fmtN(tg.protein?.[1], 0)} g/zi</dd>
+    <dt>Apă</dt><dd>${esc(tg.water || '')}</dd>
+    <dt>Pași</dt><dd>${tg.steps ? fmtN(tg.steps, 0) + '/zi' : esc(tg.stepsNote || 'în măsurare')}</dd>
+    <dt>Ritm</dt><dd>${esc(tg.pace || '')}</dd>
+    ${p.snowboard ? `<dt>Snowboard</dt><dd>${esc(p.snowboard.season)} · încă ${daysBetween(t, p.snowboard.date)} zile</dd>` : ''}
+  </dl></section>`;
+  if (p.phases?.length) h += `<section class="card"><h2>Drumul</h2><div class="timeline">${p.phases.map(ph => {
+    const cls = ph.from <= t && t <= ph.to ? 'cur' : ph.to < t ? 'past' : '';
+    return `<div class="ph ${cls}"><span class="dotc"></span><div><strong>${esc(ph.name)}</strong> <span class="muted small">${fmtShort(ph.from)} ${parse(ph.from).getFullYear()} – ${fmtShort(ph.to)} ${parse(ph.to).getFullYear()}</span><p class="small muted">${esc(ph.focus || '')}</p></div></div>`;
+  }).join('')}</div></section>`;
+  if (p.knee) h += `<section class="card"><h2>Genunchiul</h2><p>${esc(p.knee.summary || '')}</p>${p.knee.rules?.length ? `<ul>${p.knee.rules.map(r => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}</section>`;
+  h += `<section class="card"><h2>Notițe de la kineto</h2><p class="muted small">Ce ți-a spus kinetoterapeutul: exerciții recomandate, ce să eviți. Claude ține cont de ele la fiecare plan.</p>
+    <textarea data-prof="kinetoNotes">${esc(p.kinetoNotes || '')}</textarea>
+    <label class="f">Exerciții de evitat (câte unul pe rând)<textarea data-prof="avoid">${esc((p.avoid || []).join('\n'))}</textarea></label></section>`;
+  if (p.equipment) h += `<section class="card"><h2>Echipament acasă</h2><ul>${(p.equipment.home || []).map(e => `<li>${esc(e)}</li>`).join('')}</ul>${p.equipment.plates ? `<p class="small"><strong>Discuri:</strong> ${esc(p.equipment.plates)}</p>` : ''}${p.equipment.notes ? `<p class="small muted">${esc(p.equipment.notes)}</p>` : ''}</section>`;
+  h += `<section class="card"><h2>Sală</h2><p class="muted">${esc(p.gym || 'Nicio sală aleasă încă. Când te hotărăști, spune-i lui Claude ce aparate are.')}</p></section>`;
+  h += `<section class="card"><h2>Aplicația</h2><p class="muted small">Datele vin din repo-ul privat ${esc(GH.owner)}/${esc(GH.repo)}. ${QUEUE.length ? `${QUEUE.length} salvări așteaptă să fie trimise.` : 'Toate salvările sunt în GitHub.'}</p>
+    <div class="row"><button class="btn primary" data-act="update-app">Actualizează aplicația și datele</button></div>
+    <details><summary class="small muted">Conexiunea GitHub</summary><div class="sec" style="margin-top:10px">${ghForm()}</div></details></section>`;
+  return h;
+}
+
+function msgSheet() {
+  openSheet();
+  $('#sheetPanel').innerHTML = `<div class="sheet-head"><h2>Mesaje</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+    ${S.messages.length ? S.messages.map(m => `<div class="card"><span class="eyebrow">${esc(fmtShort(m.date || ''))} · ${esc(m.kind || '')}</span><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></div>`).join('') : '<p class="empty">Niciun mesaj încă.</p>'}`;
+}
+
+/* ---------- sheet ---------- */
+function openSheet() { $('#sheet').hidden = false; document.body.style.overflow = 'hidden'; }
+function closeSheet() { $('#sheet').hidden = true; document.body.style.overflow = ''; $('#sheetPanel').innerHTML = ''; }
+$('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closeSheet(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) closeSheet(); });
+
+/* ---------- uploads ---------- */
+async function shrink(file, max = 1600) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const b = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
+    return b ? { blob: b, type: 'image/jpeg' } : { blob: file, type: file.type };
+  } catch (e) { return { blob: file, type: file.type }; }
+}
+const blobB64 = b => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = no; r.readAsDataURL(b); });
+async function uploadFiles(files) {
+  const ids = []; toast('Se încarcă pozele…');
+  for (const f of files) {
+    try {
+      const { blob, type } = await shrink(f);
+      const ext = type === 'image/png' ? 'png' : 'jpg';
+      const path = `photos/${S.date}-${uid()}.${ext}`;
+      await putFile(path, await blobB64(blob), null, `Poză ${S.date}`);
+      PHOTO[path] = URL.createObjectURL(blob); ids.push(path);
+    } catch (e) { toast(e?.status === 0 ? 'Ești offline: pozele se pot încărca doar cu internet.' : 'O poză nu s-a putut încărca.'); }
+  }
+  if (ids.length) toast(ids.length === 1 ? 'Poza a fost încărcată.' : `${ids.length} poze încărcate.`);
+  return ids;
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const a = b.dataset.act;
+  if (a === 'tab') { S.tab = b.dataset.tab; S.confirm = null; try { localStorage.setItem('dsp-tab', S.tab); } catch (er) {} render(); window.scrollTo(0, 0); }
+  else if (a === 'day') { S.date = addDays(S.date, +b.dataset.n); S.confirm = null; render(); ensureRange(S.date, S.date); }
+  else if (a === 'pull') { if (QUEUE.length) flush(); else pull(); }
+  else if (a === 'update-app') updateApp();
+  else if (a === 'photo') { openSheet(); const p = b.dataset.path; $('#sheetPanel').innerHTML = `<div class="sheet-head"><h2>Poză</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div><img data-photo="${esc(p)}" alt="Poză" style="border-radius:12px">`; hydratePhotos($('#sheetPanel')); }
+  else if (a === 'gh-save') {
+    const tok = $('#gh-token')?.value.trim();
+    GH.owner = $('#gh-owner').value.trim() || GH.owner; GH.repo = $('#gh-repo').value.trim() || GH.repo;
+    if (tok) GH.token = tok;
+    if (!GH.token) { toast('Lipește tokenul ca să te conectezi.'); return; }
+    store.set('dsp-gh', GH); toast('Conexiune salvată. Încarc datele…'); S.ready.days = false; pull();
+  }
+  else if (a === 'gh-forget') { GH.token = ''; store.set('dsp-gh', GH); store.set('dsp-cache', null); S.ready.days = false; render(); toast('Tokenul a fost șters de pe acest dispozitiv.'); }
+  else if (a === 'today') { S.date = today(); render(); }
+  else if (a === 'set') {
+    const v = b.dataset.str ? b.dataset.val : +b.dataset.val;
+    const date = b.dataset.date || S.date;
+    const cur = b.getAttribute('aria-pressed') === 'true';
+    await saveDay(date, nest(b.dataset.path, cur ? null : v));
+  }
+  else if (a === 'ex') exSheet(b.dataset.ex);
+  else if (a === 'fallback') { S.fallback[S.date] = !S.fallback[S.date]; if (!S.fallback[S.date] && S.days[S.date]?.log?.completed === 'minim') await saveDay(S.date, { log: { completed: null } }); render(); }
+  else if (a === 'msgs') msgSheet();
+  else if (a === 'close') closeSheet();
+  else if (a === 'meal-new') mealSheet({ id: uid(), type: defaultMealType(), time: S.date === today() ? nowTime() : '', source: 'acasa', items: [] }, true);
+  else if (a === 'meal-edit') { const m = (S.days[S.date]?.meals || []).find(x => x.id === b.dataset.id); if (m) mealSheet(m, false); }
+  else if (a === 'meal-fav') favSheet();
+  else if (a === 'meal-star') { const m = (S.days[S.date]?.meals || []).find(x => x.id === b.dataset.id); if (m) starSheet(m); }
+  else if (a === 'ask-del') { S.confirm = b.dataset.id; render(); }
+  else if (a === 'cancel') { S.confirm = null; render(); }
+  else if (a === 'meal-del') { const list = (S.days[S.date]?.meals || []).filter(x => x.id !== b.dataset.id); S.confirm = null; await saveDay(S.date, { meals: list }); toast('Masa a fost ștearsă.'); }
+  else if (a === 'range') {
+    S.range = +b.dataset.v; render();
+    const from = S.range ? addDays(today(), -S.range) : (S.profile?.startDate || addDays(today(), -365));
+    ensureRange(from, today());
+  }
+  else if (a === 'cal') { S.calStart = addDays(S.calStart || mondayOf(today()), +b.dataset.n); render(); ensureRange(S.calStart, addDays(S.calStart, 13)); }
+  else if (a === 'goto') { S.date = b.dataset.date; S.tab = 'azi'; render(); window.scrollTo(0, 0); }
+});
+
+$('#view').addEventListener('change', async e => {
+  const el = e.target;
+  if (el.dataset.upload) {
+    const ids = await uploadFiles(el.files); if (!ids.length) return;
+    const o = S.days[S.date]?.outdoor || {};
+    await saveDay(S.date, { outdoor: { photos: [...(o.photos || []), ...ids] } }); return;
+  }
+  if (el.dataset.cal) { await saveDay(el.dataset.cal, { kind: el.value }); return; }
+  if (el.dataset.prof) {
+    const v = el.dataset.prof === 'avoid' ? el.value.split('\n').map(s => s.trim()).filter(Boolean) : el.value.trim();
+    await saveTo('config/profile.json', null, { [el.dataset.prof]: v }); toast('Salvat.'); return;
+  }
+  if (el.dataset.set) {
+    const ex = el.dataset.set;
+    const wrap = el.closest('[data-exwrap]');
+    const rows = {};
+    $$('[data-set]', wrap).forEach(x => {
+      const i = +x.dataset.i; rows[i] ||= {};
+      rows[i][x.dataset.f] = x.type === 'checkbox' ? x.checked : toNum(x.value);
+    });
+    const arr = Object.keys(rows).sort((a, b) => a - b).map(k => rows[k]);
+    await saveDay(S.date, { log: { sets: { [ex]: arr } } }); return;
+  }
+  if (el.dataset.path) {
+    let v = el.type === 'checkbox' ? el.checked : el.value;
+    if (el.dataset.type === 'num') v = toNum(v);
+    else if (typeof v === 'string') v = v.trim();
+    await saveDay(S.date, nest(el.dataset.path, v));
+  }
+});
+$('#view').addEventListener('input', e => {
+  if (e.target.id !== 'catSearch') return;
+  const qv = e.target.value.trim().toLowerCase();
+  $$('[data-catgroup]').forEach(g => {
+    let any = false;
+    $$('.cat-item', g).forEach(i => { const hit = !qv || i.dataset.name.includes(qv); i.hidden = !hit; any ||= hit; });
+    g.hidden = !any;
+  });
+});
+
+/* ---------- boot ---------- */
+async function updateApp() {
+  toast('Caut actualizări…');
+  try { const reg = await navigator.serviceWorker?.getRegistration(); await reg?.update(); } catch (e) {}
+  location.reload();
+}
+function init() {
+  if (GH.token) cacheLoad();
+  render();
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  pull();
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && GH.token) { if (QUEUE.length) flush(); else pull(); } });
+}
+init();
+</script>
+</body>
+</html>
