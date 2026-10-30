@@ -479,44 +479,95 @@ function commitMessage(ops) {
   return `Jurnal: ${parts.join(' · ')}`;
 }
 
+// Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
+// without rewriting the history of the journal on main.
+const PHOTO_BRANCH = 'poze';
+async function commitTo(branch, build, message) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let head = null, baseTree = null;
+    const r = await gh(`/git/ref/heads/${branch}`);
+    if (r.ok) { head = (await r.json()).object.sha; baseTree = (await ghJson(`/git/commits/${head}`)).tree.sha; }
+    else if (r.status !== 404 && r.status !== 409) throw new GhError(r.status, await r.text());
+    const { entries, written } = await build(head);
+    const t = await ghJson('/git/trees', { method: 'POST', body: JSON.stringify(baseTree ? { base_tree: baseTree, tree: entries } : { tree: entries }) });
+    const c = await ghJson('/git/commits', { method: 'POST', body: JSON.stringify({ message, tree: t.sha, parents: head ? [head] : [] }) });
+    const u = head
+      ? await gh(`/git/refs/heads/${branch}`, { method: 'PATCH', body: JSON.stringify({ sha: c.sha, force: false }) })
+      : await gh('/git/refs', { method: 'POST', body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: c.sha }) });
+    if (u.ok) return written || {};
+    if (u.status !== 422 && u.status !== 409) throw new GhError(u.status, await u.text());
+  }
+  throw new GhError(409, 'conflict');
+}
+async function readAt(path, ref) {
+  const r = await gh(`/contents/${cpath(path)}?ref=${encodeURIComponent(ref)}`);
+  if (r.status === 404) return null;
+  if (!r.ok) throw new GhError(r.status, await r.text());
+  return dec((await r.json()).content);
+}
+function applyOp(data, o) {
+  if (o.mealsEst) {
+    const day = data[o.key] || {};
+    return { ...data, [o.key]: { ...day, meals: (day.meals || []).map(m => o.mealsEst[m.id] ? { ...m, est: o.mealsEst[m.id] } : m) } };
+  }
+  if (o.replace) { const out = { ...data }; if (o.patch == null) delete out[o.key]; else out[o.key] = o.patch; return out; }
+  return o.key == null ? merge(data, o.patch) : { ...data, [o.key]: merge(data[o.key], o.patch) };
+}
+function prependJournal(text, add, date) {
+  const lines = (text || '# Jurnalul antrenorului\n').split('\n');
+  const head = `## ${date}`;
+  const at = lines.indexOf(head);
+  if (at >= 0) lines.splice(at + 1, 0, ...add.split('\n'));
+  else {
+    const first = lines.findIndex(l => l.startsWith('## '));
+    const block = [head, ...add.split('\n'), ''];
+    if (first >= 0) lines.splice(first, 0, ...block); else lines.push('', ...block);
+  }
+  return lines.join('\n');
+}
 let sending = false;
-async function sendAll() {
-  if (sending || !QUEUE.length || !GH.token) return;
+async function sendAll(ops = [...QUEUE], message = commitMessage(ops), fromQueue = true) {
+  if (sending || !ops.length || !GH.token) return false;
   sending = true; S.sync = 'sending'; renderChrome();
-  const ops = [...QUEUE];
+  let ok = false;
   try {
-    let done = false;
-    for (let attempt = 0; attempt < 3 && !done; attempt++) {
-      const head = (await ghJson(`/git/ref/heads/${GH.branch}`)).object.sha;
-      const baseTree = (await ghJson(`/git/commits/${head}`)).tree.sha;
-      const tree = [], written = {};
-      for (const file of [...new Set(ops.filter(o => !o.photo).map(o => o.file))]) {
-        const r = await gh(`/contents/${cpath(file)}?ref=${head}`);
-        if (!r.ok && r.status !== 404) throw new GhError(r.status, await r.text());
-        let data = r.ok ? JSON.parse(dec((await r.json()).content)) : {};
-        ops.filter(o => o.file === file).forEach(o => { data = o.key == null ? merge(data, o.patch) : { ...data, [o.key]: merge(data[o.key], o.patch) }; });
-        tree.push({ path: file, mode: '100644', type: 'blob', content: JSON.stringify(data, null, 1) + '\n' });
-        written[file] = data;
-      }
-      for (const o of ops.filter(o => o.photo)) {
-        const b = await ghJson('/git/blobs', { method: 'POST', body: JSON.stringify({ content: o.b64, encoding: 'base64' }) });
-        tree.push({ path: o.file, mode: '100644', type: 'blob', sha: b.sha });
-      }
-      const t = await ghJson('/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: baseTree, tree }) });
-      const c = await ghJson('/git/commits', { method: 'POST', body: JSON.stringify({ message: commitMessage(ops), tree: t.sha, parents: [head] }) });
-      const u = await gh(`/git/refs/heads/${GH.branch}`, { method: 'PATCH', body: JSON.stringify({ sha: c.sha, force: false }) });
-      if (u.ok) { done = true; Object.entries(written).forEach(([f, data]) => FILES[f] = { sha: null, data }); }
-      else if (u.status !== 422 && u.status !== 409) throw new GhError(u.status, await u.text());
+    const photos = ops.filter(o => o.photo);
+    if (photos.length) {
+      await commitTo(PHOTO_BRANCH, async () => {
+        const entries = [];
+        for (const o of photos) {
+          const b = await ghJson('/git/blobs', { method: 'POST', body: JSON.stringify({ content: o.b64, encoding: 'base64' }) });
+          entries.push({ path: o.file, mode: '100644', type: 'blob', sha: b.sha });
+        }
+        return { entries };
+      }, `Poze: ${photos.length}`);
     }
-    if (!done) throw new GhError(409, 'conflict');
-    QUEUE = QUEUE.filter(o => !ops.includes(o)); saveQueue();
-    ops.filter(o => o.photo).forEach(o => { if (!PHOTO[o.file]) PHOTO[o.file] = `data:image/jpeg;base64,${o.b64}`; });
-    S.sync = 'ok'; closeSheet(); toast('Notițele au fost trimise în GitHub.');
+    const rest = ops.filter(o => !o.photo);
+    if (rest.length) {
+      const written = await commitTo(GH.branch, async head => {
+        const entries = [], written = {};
+        for (const file of [...new Set(rest.map(o => o.file))]) {
+          const raw = await readAt(file, head);
+          const mine = rest.filter(o => o.file === file);
+          let content;
+          if (mine[0].journal) content = mine.reduce((txt, o) => prependJournal(txt, o.journal, o.date), raw);
+          else { let data = raw ? JSON.parse(raw) : {}; mine.forEach(o => { data = applyOp(data, o); }); written[file] = data; content = JSON.stringify(data, null, 1) + '\n'; }
+          entries.push({ path: file, mode: '100644', type: 'blob', content });
+        }
+        return { entries, written };
+      }, message);
+      Object.entries(written).forEach(([f, data]) => FILES[f] = { sha: null, data });
+    }
+    if (fromQueue) { QUEUE = QUEUE.filter(o => !ops.includes(o)); saveQueue(); }
+    photos.forEach(o => { if (!PHOTO[o.file]) PHOTO[o.file] = `data:image/jpeg;base64,${o.b64}`; });
+    S.sync = 'ok'; ok = true;
+    if (fromQueue) { closeSheet(); toast('Notițele au fost trimise în GitHub.'); }
   } catch (e) {
     S.sync = e.status === 0 ? 'offline' : 'error';
     toast(errText(e));
   }
   sending = false; renderChrome(); schedule();
+  return ok;
 }
 function reviewSheet() {
   openSheet();
@@ -540,8 +591,12 @@ function saveDay(date, patch) {
 }
 function saveTo(file, key, patch) { queueOp({ file, key, patch }); return Promise.resolve(); }
 
+// The device keeps only ~3 months; older months are fetched on demand for long charts and never stored.
+const CACHE_DAYS = 92;
 function cacheSave() {
-  store.set('dsp-cache', { index: S.index, profile: S.profile, catalog: S.catalog, favMap: S.favMap, days: S.days, plans: S.plans, msgMap: S.msgMap, months: [...loadedMonths] });
+  const from = addDays(today(), -CACHE_DAYS);
+  const recent = obj => Object.fromEntries(Object.entries(obj || {}).filter(([k, v]) => (v?.date || k) >= from));
+  store.set('dsp-cache', { index: S.index, profile: S.profile, catalog: S.catalog, favMap: S.favMap, days: recent(S.days), plans: recent(S.plans), msgMap: recent(S.msgMap) });
 }
 function cacheLoad() {
   const c = store.get('dsp-cache', null); if (!c) return false;
@@ -589,20 +644,171 @@ async function pull() {
   render();
 }
 
+/* ---------- coach without the PC: build a prompt for Claude on the phone, import its JSON answer ---------- */
+async function listDir(path) {
+  const r = await gh(`/contents/${cpath(path)}?ref=${encodeURIComponent(GH.branch)}`);
+  return r.ok ? (await r.json()).map(f => f.name) : [];
+}
+async function buildPack() {
+  await pull();
+  const t = today();
+  const [coach, idx, jurnal, rez] = await Promise.all([readAt('COACH.md', GH.branch), readAt('index.json', GH.branch), readAt('coach/jurnal.md', GH.branch), listDir('rezumate')]);
+  const pick = [...rez.filter(n => /^\d{4}-\d{2}\.json$/.test(n)).sort().slice(-2), ...rez.filter(n => /^\d{4}-S\d{2}\.json$/.test(n)).sort().slice(-4)];
+  const summaries = await Promise.all(pick.map(async n => `### ${n}\n${await readAt('rezumate/' + n, GH.branch)}`));
+  const days = {}, plans = {}, events = {};
+  for (let i = 3; i >= 0; i--) { const d = addDays(t, -i); if (S.days[d]) days[d] = S.days[d]; }
+  for (let i = -1; i <= 7; i++) { const d = addDays(t, i); if (S.plans[d]) plans[d] = S.plans[d]; }
+  for (let i = 1; i <= 21; i++) { const d = addDays(t, i); if (S.days[d]?.events?.length) events[d] = S.days[d].events; }
+  const recentMsgs = S.messages.slice(0, 3).map(m => `${m.date} · ${m.title}: ${m.body}`).join('\n');
+  const catalog = Object.entries(S.catalog).map(([id, c]) => `${id}: ${c.name}`).join('\n');
+  const now = new Date();
+  return `Ești antrenorul lui Mihai din aplicația Summit Building. Laptopul lui e închis, așa că faci acum, manual, ce face verificarea automată: procesezi ce e nou (mese fără "est", antrenamente și evaluări ale zilei de ieri, ieșiri, cardio, ocazii) după regulile din COACH.md de mai jos.
+
+Acum: ${fmtDate(t)}, ora ${pad(now.getHours())}:${pad(now.getMinutes())}.
+
+Răspunde în română: întâi feedback-ul pentru Mihai, scurt (3–6 rânduri). Apoi, la final, UN SINGUR bloc \`\`\`json cu exact structura de mai jos; omite cheile de care nu ai nevoie.
+{
+ "messages": [{"id": "${t}-manual", "date": "${t}", "kind": "feedback", "title": "max 6 cuvinte", "body": "2–4 rânduri"}],
+ "meals_est": {"AAAA-LL-ZZ": {"<id masă existent>": {"kcal": 0, "protein": 0, "note": "opțional"}}},
+ "coach": {"AAAA-LL-ZZ": {"kcal": 0, "protein": 0, "foodNote": "1–2 propoziții"}},
+ "plans": {"AAAA-LL-ZZ": {"sesiune completă, în același format ca planurile de mai jos": "..."}},
+ "index": {"doar câmpurile din index.json pe care le schimbi, inclusiv altitude": "..."},
+ "journal": "- 1–3 rânduri cu ce ai observat și decis"
+}
+Reguli: nu schimba nimic din ce a scris Mihai; în meals_est folosești doar id-urile meselor de mai jos; în plans dai sesiunea completă (sau null ca s-o ștergi) și respecți toate regulile din COACH.md (discuri, un singur schimb, genunchi); exercițiile folosesc id-urile din catalog. Dacă ai nevoie să vezi poza unei mese, roagă-l să o atașeze aici.
+
+===== COACH.md =====
+${coach || '(lipsește)'}
+
+===== index.json =====
+${idx || '{}'}
+
+===== Jurnalul antrenorului (cele mai noi sus) =====
+${(jurnal || '').split('\n').slice(0, 60).join('\n')}
+
+===== Rezumate recente =====
+${summaries.join('\n\n') || '(încă niciunul)'}
+
+===== Zilele recente (days) =====
+${JSON.stringify(days, null, 1)}
+
+===== Planul de ieri până peste o săptămână (plans) =====
+${JSON.stringify(plans, null, 1)}
+
+===== Ocazii în următoarele 3 săptămâni =====
+${JSON.stringify(events, null, 1)}
+
+===== Ultimele tale mesaje (nu le repeta) =====
+${recentMsgs || '(niciunul)'}
+
+===== Catalog: id-uri de exerciții =====
+${catalog}
+`;
+}
+const isDate = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+const isNum = v => typeof v === 'number' && isFinite(v);
+function parseCoachAnswer(text) {
+  const fence = [...String(text).matchAll(/```(?:json)?\s*([\s\S]*?)```/g)].pop();
+  let raw = fence ? fence[1] : String(text);
+  if (!fence) { const a = raw.indexOf('{'), b = raw.lastIndexOf('}'); raw = a >= 0 && b > a ? raw.slice(a, b + 1) : raw; }
+  let j;
+  try { j = JSON.parse(raw); } catch (e) { throw new Error('Nu găsesc un bloc JSON valid. Copiază tot răspunsul, inclusiv blocul de la final.'); }
+  if (!isObj(j)) throw new Error('Blocul JSON trebuie să fie un obiect.');
+  const allowed = ['messages', 'meals_est', 'coach', 'plans', 'index', 'journal'];
+  const extra = Object.keys(j).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error(`Răspunsul conține câmpuri neacceptate: ${extra.join(', ')}.`);
+  const ops = [], preview = [];
+  (j.messages || []).forEach(m => {
+    if (!isObj(m) || !isDate(m.date) || typeof m.id !== 'string' || !/^[\w.-]{6,60}$/.test(m.id) || typeof m.title !== 'string' || typeof m.body !== 'string') throw new Error('Un mesaj nu are formatul corect (id, date, title, body).');
+    const msg = { id: m.id, date: m.date, kind: ['feedback', 'zilnic', 'săptămânal'].includes(m.kind) ? m.kind : 'feedback', title: m.title.slice(0, 120), body: m.body.slice(0, 3000), ts: new Date().toISOString() };
+    ops.push({ file: `messages/${m.date.slice(0, 7)}.json`, key: m.id, replace: true, patch: msg });
+    preview.push(['Mesaj nou', `${msg.title}`]);
+  });
+  Object.entries(j.meals_est || {}).forEach(([d, map]) => {
+    if (!isDate(d) || !isObj(map)) throw new Error('meals_est are o dată sau un format greșit.');
+    const meals = S.days[d]?.meals || [];
+    const est = {};
+    Object.entries(map).forEach(([id, e]) => {
+      if (!meals.some(m => m.id === id)) throw new Error(`Masa ${id} din ${d} nu există în jurnal.`);
+      if (!isObj(e) || !isNum(e.kcal) || !isNum(e.protein)) throw new Error('O estimare de masă nu are kcal și protein numerice.');
+      est[id] = { kcal: Math.round(e.kcal), protein: Math.round(e.protein), ...(typeof e.note === 'string' && e.note ? { note: e.note.slice(0, 400) } : {}) };
+      const m = meals.find(x => x.id === id);
+      preview.push([`${fmtShort(d)} · ${MEALT.find(x => x[0] === m.type)?.[1] || 'masă'}`, `~${est[id].kcal} kcal, ${est[id].protein} g proteine`]);
+    });
+    ops.push({ file: `days/${d.slice(0, 7)}.json`, key: d, mealsEst: est });
+  });
+  Object.entries(j.coach || {}).forEach(([d, c]) => {
+    if (!isDate(d) || !isObj(c) || !isNum(c.kcal) || !isNum(c.protein)) throw new Error('coach are o dată sau valori greșite.');
+    ops.push({ file: `days/${d.slice(0, 7)}.json`, key: d, patch: { coach: { kcal: Math.round(c.kcal), protein: Math.round(c.protein), foodNote: String(c.foodNote || '').slice(0, 600) } } });
+    preview.push([`${fmtShort(d)} · total`, `~${Math.round(c.kcal)} kcal, ${Math.round(c.protein)} g proteine`]);
+  });
+  Object.entries(j.plans || {}).forEach(([d, p]) => {
+    if (!isDate(d)) throw new Error('Un plan are o dată greșită.');
+    if (p !== null && (!isObj(p) || typeof p.title !== 'string' || (p.blocks && !Array.isArray(p.blocks)))) throw new Error(`Planul pentru ${d} nu are formatul corect.`);
+    ops.push({ file: `plan/${d.slice(0, 7)}.json`, key: d, replace: true, patch: p === null ? null : { ...p, date: d } });
+    preview.push([`Plan ${fmtShort(d)}`, p === null ? 'șters' : p.title]);
+  });
+  if (j.index != null) {
+    if (!isObj(j.index)) throw new Error('index trebuie să fie un obiect.');
+    ops.push({ file: 'index.json', key: null, patch: j.index });
+    preview.push(['Rezumat (index)', Object.keys(j.index).join(', ')]);
+  }
+  if (j.journal != null) {
+    if (typeof j.journal !== 'string') throw new Error('journal trebuie să fie text.');
+    ops.push({ file: 'coach/jurnal.md', journal: j.journal.slice(0, 2000), date: today() });
+    preview.push(['Jurnalul antrenorului', j.journal.split('\n')[0].slice(0, 80)]);
+  }
+  if (!ops.length) throw new Error('Răspunsul nu conține nimic de aplicat.');
+  return { ops, preview };
+}
+let PACK = '';
+function manualSheet() {
+  openSheet();
+  const p = $('#sheetPanel');
+  const blocked = QUEUE.length > 0;
+  p.innerHTML = `<div class="sheet-head"><h2>Antrenor fără PC</h2><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+    <p class="muted small">Pentru când laptopul e închis: duci datele la Claude pe telefon și aduci răspunsul înapoi în GitHub.</p>
+    ${blocked ? `<div class="card swap"><p>Ai ${QUEUE.length} modificări netrimise. Trimite-le întâi, ca să le vadă și antrenorul.</p><button class="btn primary" data-act="review">Trimite notițele</button></div>` : ''}
+    <section class="card"><h3>1 · Pachetul pentru Claude</h3>
+      <p class="small">Copiază-l și lipește-l într-o conversație nouă cu Claude pe telefon. Atașează acolo și pozele meselor, dacă e nevoie.</p>
+      <div class="row"><button class="btn primary" data-act="pack-build" ${blocked ? 'disabled' : ''}>Pregătește pachetul</button><button class="btn" data-act="pack-copy" id="packCopy" hidden>Copiază din nou</button></div>
+      <textarea id="packText" readonly hidden style="min-height:120px;font-size:12px"></textarea>
+      <p class="note" id="packInfo"></p></section>
+    <section class="card"><h3>2 · Răspunsul lui Claude</h3>
+      <p class="small">Copiază tot răspunsul (sau doar blocul JSON de la final) și lipește-l aici.</p>
+      <textarea id="answerText" placeholder="Lipește răspunsul aici" style="min-height:120px;font-size:13px"></textarea>
+      <div class="row"><button class="btn primary" data-act="answer-check">Verifică răspunsul</button></div>
+      <div id="answerPreview"></div></section>`;
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch (e) { const ta = $('#packText'); if (ta) { ta.hidden = false; ta.focus(); ta.select(); } return false; }
+}
+let IMPORT = null;
+
 /* ---------- photos ---------- */
 const PHOTO = {};
 async function photoURL(path) {
   if (PHOTO[path]) return PHOTO[path];
   const local = QUEUE.find(o => o.photo && o.file === path);
   if (local) return (PHOTO[path] = `data:image/jpeg;base64,${local.b64}`);
-  const r = await gh(`/contents/${cpath(path)}?ref=${encodeURIComponent(GH.branch)}`, { headers: { Accept: 'application/vnd.github.raw+json' } });
-  if (!r.ok) throw new GhError(r.status, 'photo');
-  return (PHOTO[path] = URL.createObjectURL(await r.blob()));
+  for (const ref of [PHOTO_BRANCH, GH.branch]) {
+    const r = await gh(`/contents/${cpath(path)}?ref=${encodeURIComponent(ref)}`, { headers: { Accept: 'application/vnd.github.raw+json' } });
+    if (r.ok) return (PHOTO[path] = URL.createObjectURL(await r.blob()));
+    if (r.status !== 404) throw new GhError(r.status, 'photo');
+  }
+  throw new GhError(404, 'photo');
 }
 function hydratePhotos(root = document) {
   $$('img[data-photo]', root).forEach(async img => {
     if (img.getAttribute('src')) return;
-    try { img.src = await photoURL(img.dataset.photo); } catch (e) { img.alt = 'Poza nu s-a putut încărca'; }
+    try { img.src = await photoURL(img.dataset.photo); }
+    catch (e) {
+      const s = document.createElement('span');
+      s.className = 'note';
+      s.textContent = e.status === 404 ? 'Poză ștearsă după procesare' : 'Poza nu s-a putut încărca';
+      img.replaceWith(s);
+    }
   });
 }
 const thumb = p => `<button type="button" data-act="photo" data-path="${esc(p)}" aria-label="Deschide poza"><img data-photo="${esc(p)}" alt="Poză"></button>`;
@@ -756,7 +962,7 @@ function viewAzi() {
   h += todayHero(d, day);
   if (d === t) {
     const m = S.messages[0];
-    if (m) h += `<section class="card"><div class="row between"><span class="eyebrow">Mesaj de la Claude · ${esc(fmtShort(m.date || t))}</span><button class="linkbtn small" data-act="msgs">Toate mesajele</button></div><div class="msg"><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></div></section>`;
+    if (m) h += `<section class="card"><div class="row between"><span class="eyebrow">Mesaj de la Claude · ${esc(fmtShort(m.date || t))}</span><button class="linkbtn small" data-act="msgs">Toate mesajele</button></div><div class="msg"><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></div><button class="linkbtn small" data-act="manual">Laptopul e închis? Antrenor fără PC</button></section>`;
   }
   h += yesterdayHTML(d);
 
@@ -1272,7 +1478,7 @@ function viewProfile() {
   if (p.equipment) h += `<section class="card"><h2>Echipament acasă</h2><ul>${(p.equipment.home || []).map(e => `<li>${esc(e)}</li>`).join('')}</ul>${p.equipment.plates ? `<p class="small"><strong>Discuri:</strong> ${esc(p.equipment.plates)}</p>` : ''}${p.equipment.notes ? `<p class="small muted">${esc(p.equipment.notes)}</p>` : ''}</section>`;
   h += `<section class="card"><h2>Sală</h2><p class="muted">${esc(p.gym || 'Nicio sală aleasă încă. Când te hotărăști, spune-i lui Claude ce aparate are.')}</p></section>`;
   h += `<section class="card"><h2>Aplicația</h2><p class="muted small">Datele vin din repo-ul privat ${esc(GH.owner)}/${esc(GH.repo)}. ${QUEUE.length ? `${QUEUE.length} salvări așteaptă să fie trimise.` : 'Toate salvările sunt în GitHub.'}</p>
-    <div class="row"><button class="btn primary" data-act="update-app">Actualizează aplicația și datele</button></div>
+    <div class="row"><button class="btn primary" data-act="update-app">Actualizează aplicația și datele</button><button class="btn" data-act="manual">Antrenor fără PC</button></div>
     <details><summary class="small muted">Conexiunea GitHub</summary><div class="sec" style="margin-top:10px">${ghForm()}</div></details></section>`;
   return h;
 }
@@ -1324,6 +1530,33 @@ document.addEventListener('click', async e => {
   else if (a === 'day') { S.date = addDays(S.date, +b.dataset.n); S.confirm = null; render(); ensureRange(S.date, S.date); }
   else if (a === 'pull') pull();
   else if (a === 'review') reviewSheet();
+  else if (a === 'manual') manualSheet();
+  else if (a === 'pack-build') {
+    b.disabled = true; $('#packInfo').textContent = 'Descarc datele din GitHub…';
+    try {
+      PACK = await buildPack();
+      $('#packText').value = PACK;
+      const copied = await copyText(PACK);
+      $('#packInfo').textContent = `${Math.round(new Blob([PACK]).size / 1024)} KB. ${copied ? 'Copiat. Lipește-l într-o conversație nouă cu Claude.' : 'Selectează tot textul de mai sus și copiază-l.'}`;
+      $('#packCopy').hidden = false;
+    } catch (e) { $('#packInfo').textContent = errText(e); }
+    b.disabled = false;
+  }
+  else if (a === 'pack-copy') { const ok = await copyText(PACK); $('#packInfo').textContent = ok ? 'Copiat din nou.' : 'Selectează tot textul și copiază-l.'; }
+  else if (a === 'answer-check') {
+    const box = $('#answerPreview');
+    try {
+      IMPORT = parseCoachAnswer($('#answerText').value);
+      box.innerHTML = `<dl class="kv">${IMPORT.preview.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+        <div class="row"><button class="btn primary" data-act="answer-apply">Aplică și trimite</button></div>`;
+    } catch (e) { IMPORT = null; box.innerHTML = `<p class="small" style="color:var(--bad)">${esc(e.message)}</p>`; }
+  }
+  else if (a === 'answer-apply' && IMPORT) {
+    b.disabled = true;
+    const ok = await sendAll(IMPORT.ops, `Antrenor: manual (telefon) · ${IMPORT.preview.length} modificări`, false);
+    if (ok) { IMPORT = null; closeSheet(); toast('Răspunsul antrenorului a fost salvat în GitHub.'); pull(); }
+    else b.disabled = false;
+  }
   else if (a === 'event-new') eventSheet({ id: uid(), date: S.tab === 'calendar' ? today() : S.date }, null);
   else if (a === 'event-edit') { const e = (S.days[b.dataset.date]?.events || []).find(x => x.id === b.dataset.id); if (e) eventSheet({ ...e, date: b.dataset.date }, b.dataset.date); }
   else if (a === 'event-del') { const dt = b.dataset.date; S.confirm = null; saveDay(dt, { events: (S.days[dt]?.events || []).filter(x => x.id !== b.dataset.id) }); }
