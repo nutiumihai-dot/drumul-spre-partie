@@ -213,11 +213,17 @@ textarea { min-height: 70px; resize: vertical; }
 /* meals */
 .meal { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
 .meal:first-of-type { border-top: 0; padding-top: 0; }
-.meal ul { margin: 0; padding-left: 18px; }
 .thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
 .thumbs img { width: 68px; height: 68px; object-fit: cover; border-radius: 10px; }
 .item-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--surface); border-radius: 12px; padding: 10px; box-shadow: var(--shadow); }
 .item-row .full { grid-column: 1 / -1; }
+.item-photos { display: flex; flex-direction: column; gap: 6px; }
+.ph-thumb { position: relative; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: 600; color: var(--muted); }
+.ph-thumb img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; }
+.ph-thumb .x { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: var(--night); color: #fff; font-size: 13px; line-height: 1; }
+.dish { display: flex; flex-direction: column; gap: 4px; }
+.dish + .dish { border-top: 1px dashed var(--line); padding-top: 6px; }
+.dish .thumbs img { width: 52px; height: 52px; }
 .totals { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .meter { display: flex; flex-direction: column; gap: 6px; }
 .meter .v { font-family: var(--font-display); font-size: 34px; font-style: italic; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
@@ -594,7 +600,7 @@ function describe(patch) {
     if (p === 'events') { lines.push(['Ocazii', v.length ? v.map(eventLine).join(' · ') : 'toate șterse']); return; }
     if (p === 'cardio') { lines.push(['Cardio', v.length ? v.map(cardioLine).join(' · ') : 'tot șters']); return; }
     if (p === 'gear') { lines.push(['Echipament luat', v?.length ? gearNames(v) : 'nimic']); return; }
-    if (p === 'meals') { lines.push(['Mese', v.length ? v.map(m => `${MEALT.find(x => x[0] === m.type)?.[1] || m.type}${m.time ? ' ' + m.time : ''}: ${(m.items || []).map(i => i.name).join(', ') || 'poze'}`).join(' · ') : 'toate șterse']); return; }
+    if (p === 'meals') { lines.push(['Mese', v.length ? v.map(m => `${MEALT.find(x => x[0] === m.type)?.[1] || m.type}${m.time ? ' ' + m.time : ''}: ${(m.items || []).map(i => i.name).filter(Boolean).join(', ') || 'poze'}`).join(' · ') : 'toate șterse']); return; }
     if (pre === 'log.sets') { lines.push([`Serii · ${exName(k)}`, (v || []).map(s => `${s.kg != null ? s.kg + ' kg × ' : ''}${s.reps ?? '?'}${s.done ? ' ✓' : ''}`).join(', ')]); return; }
     if (pre === 'log.done') { lines.push([`Făcut · ${exName(k)}`, showVal(v)]); return; }
     if (pre === 'rejects') { lines.push([`Respins · ${exName(k)}`, v ? rejectLine(v) : 'anulat']); return; }
@@ -653,7 +659,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v20';
+const APP_VERSION = 'v21';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -846,14 +852,14 @@ Acum: ${fmtDate(t)}, ora ${pad(now.getHours())}:${pad(now.getMinutes())}.
 Răspunde în română: întâi feedback-ul pentru Mihai, scurt (3–6 rânduri). Apoi, la final, UN SINGUR bloc \`\`\`json cu exact structura de mai jos; omite cheile de care nu ai nevoie.
 {
  "messages": [{"id": "${t}-manual", "date": "${t}", "kind": "feedback", "title": "max 6 cuvinte", "body": "2–4 rânduri"}],
- "meals_est": {"AAAA-LL-ZZ": {"<id masă existent>": {"kcal": 0, "protein": 0, "note": "opțional"}}},
+ "meals_est": {"AAAA-LL-ZZ": {"<id masă existent>": {"kcal": 0, "protein": 0, "items": [{"kcal": 0, "protein": 0, "src": "cantitate|meniu|poza|tipic", "found": "opțional: ce ai citit din captura de meniu"}], "note": "opțional"}}},
  "coach": {"AAAA-LL-ZZ": {"kcal": 0, "protein": 0, "foodNote": "1–2 propoziții"}},
  "plans": {"AAAA-LL-ZZ": {"sesiune completă, în același format ca planurile de mai jos": "..."}},
  "index": {"doar câmpurile din index.json pe care le schimbi, inclusiv altitude": "..."},
  "journal": "- 1–3 rânduri cu ce ai observat și decis",
  "requests_done": ["id-urile cererilor lui la care ai răspuns"]
 }
-Reguli: nu schimba nimic din ce a scris Mihai; în meals_est folosești doar id-urile meselor de mai jos; în plans dai sesiunea completă (sau null ca s-o ștergi) și respecți toate regulile din COACH.md (discuri, un singur schimb, genunchi); exercițiile folosesc id-urile din catalog. Dacă ai nevoie să vezi poza unei mese, roagă-l să o atașeze aici.
+Reguli: nu schimba nimic din ce a scris Mihai; în meals_est folosești doar id-urile meselor de mai jos; în plans dai sesiunea completă (sau null ca s-o ștergi) și respecți toate regulile din COACH.md (discuri, un singur schimb, genunchi); exercițiile folosesc id-urile din catalog. Pozele sunt pe preparate (items[].photos, kind "farfurie" = porția, "meniu" = captură cu gramaj/ingrediente); în meals_est.items dai câte o estimare pentru fiecare preparat, în aceeași ordine. Dacă ai nevoie să vezi o poză, roagă-l să o atașeze aici și spune-i la ce preparat.
 
 ===== COACH.md =====
 ${coach || '(lipsește)'}
@@ -912,7 +918,9 @@ function parseCoachAnswer(text) {
     Object.entries(map).forEach(([id, e]) => {
       if (!meals.some(m => m.id === id)) throw new Error(`Masa ${id} din ${d} nu există în jurnal.`);
       if (!isObj(e) || !isNum(e.kcal) || !isNum(e.protein)) throw new Error('O estimare de masă nu are kcal și protein numerice.');
-      est[id] = { kcal: Math.round(e.kcal), protein: Math.round(e.protein), ...(typeof e.note === 'string' && e.note ? { note: e.note.slice(0, 400) } : {}) };
+      const items = Array.isArray(e.items) ? e.items.map(x => isObj(x) && isNum(x.kcal) && isNum(x.protein)
+        ? { kcal: Math.round(x.kcal), protein: Math.round(x.protein), ...(EST_SRC[x.src] ? { src: x.src } : {}), ...(typeof x.found === 'string' && x.found ? { found: x.found.slice(0, 300) } : {}) } : {}) : null;
+      est[id] = { kcal: Math.round(e.kcal), protein: Math.round(e.protein), ...(items ? { items } : {}), ...(typeof e.note === 'string' && e.note ? { note: e.note.slice(0, 400) } : {}) };
       const m = meals.find(x => x.id === id);
       preview.push([`${fmtShort(d)} · ${MEALT.find(x => x[0] === m.type)?.[1] || 'masă'}`, `~${est[id].kcal} kcal, ${est[id].protein} g proteine`]);
     });
@@ -1551,7 +1559,7 @@ function viewFood() {
       <div class="meter"><span class="eyebrow">Calorii</span><span class="v">${kcal == null ? '–' : fmtN(kcal, 0)}</span><div class="bar"><span style="width:${Math.min(100, (kcal || 0) / kHi * 100)}%"></span></div></div>
       <div class="meter p"><span class="eyebrow">Proteine (g)</span><span class="v">${prot == null ? '–' : fmtN(prot, 0)}</span><div class="bar"><span style="width:${Math.min(100, (prot || 0) / pLo * 100)}%"></span></div></div>
     </div>
-    ${kcal == null && meals.length ? `<p class="muted small">Estimarea apare după procesarea de seară (21:30).</p>` : ''}
+    ${kcal == null && meals.length ? `<p class="muted small">Estimarea apare la următoarea verificare a antrenorului.</p>` : ''}
     ${day.coach?.foodNote ? `<div class="msg"><p class="pre">${esc(day.coach.foodNote)}</p></div>` : ''}
   </section>
   <div class="row"><button class="btn primary" data-act="meal-new">+ Adaugă masă</button><button class="btn" data-act="meal-fav">Favorite</button></div>
@@ -1564,7 +1572,7 @@ function viewFood() {
       const typ = MEALT.find(x => x[0] === m.type)?.[1] || m.type;
       const src = SRC.find(x => x[0] === m.source)?.[1] || '';
       h += `<div class="meal"><div class="row between"><strong>${esc(typ)}${m.time ? ` · ${esc(m.time)}` : ''}</strong><span class="muted small">${esc(src)}${m.place ? ` · ${esc(m.place)}` : ''}</span></div>
-        <ul>${(m.items || []).map(i => `<li>${esc(i.name)}${i.brand ? ` <span class="muted">(${esc(i.brand)})</span>` : ''}${i.qty ? ` · ${esc(i.qty)}` : ''}${i.prep ? ` · ${esc(i.prep)}` : ''}</li>`).join('')}</ul>
+        ${(m.items || []).map((i, k) => dishHTML(i, m.est?.items?.[k])).join('')}
         ${m.notes ? `<p class="note">${esc(m.notes)}</p>` : ''}
         ${m.photos?.length ? `<div class="thumbs">${m.photos.map(thumb).join('')}</div>` : ''}
         ${m.est ? `<div class="ex-meta"><span class="pill load">~${fmtN(m.est.kcal, 0)} kcal</span><span class="pill">~${fmtN(m.est.protein, 0)} g proteine</span></div>`
@@ -1580,10 +1588,23 @@ function viewFood() {
   return h + '</div></div>';
 }
 
+// Each dish carries its own photos: `farfurie` (the plate, for the portion) or `meniu` (menu / Glovo screenshot with grams
+// and ingredients). One photo may belong to several dishes. The coach answers per dish in est.items[k] = {kcal, protein, src, found?}.
+const PHK = { farfurie: 'farfurie', meniu: 'meniu' };
+const EST_SRC = { cantitate: 'din cantitate', meniu: 'din meniu', poza: 'din poză', tipic: 'porție obișnuită' };
+const phPath = ph => typeof ph === 'string' ? ph : ph?.path;
+function dishHTML(i, e) {
+  return `<div class="dish"><span><strong>${esc(i.name || 'Preparat')}</strong>${i.brand ? ` <span class="muted">(${esc(i.brand)})</span>` : ''}${i.qty ? ` · ${esc(i.qty)}` : ''}${i.prep ? ` · ${esc(i.prep)}` : ''}</span>
+    ${i.ingredients ? `<span class="muted small">Conține: ${esc(i.ingredients)}</span>` : ''}
+    ${e?.found ? `<span class="muted small">Din meniu: ${esc(e.found)}</span>` : ''}
+    ${i.photos?.length ? `<div class="thumbs">${i.photos.map(ph => thumb(phPath(ph))).join('')}</div>` : ''}
+    ${e && e.kcal != null ? `<span class="small"><b>~${fmtN(e.kcal, 0)} kcal</b> · ~${fmtN(e.protein, 0)} g proteine${EST_SRC[e.src] ? ` · <span class="muted">${EST_SRC[e.src]}</span>` : ''}</span>` : ''}</div>`;
+}
 function mealSheet(meal, isNew) {
   const m = JSON.parse(JSON.stringify(meal));
-  m.items = m.items?.length ? m.items : [{ name: '', brand: '', qty: '', prep: '' }];
-  m.photos = m.photos || [];
+  const blank = () => ({ name: '', brand: '', qty: '', prep: '', ingredients: '', photos: [] });
+  m.items = m.items?.length ? m.items.map(i => ({ ...blank(), ...i, photos: i.photos || [] })) : [blank()];
+  let last = null; // photos just added: {row, paths, kind}, offered to the other dishes
   const places = [...new Set(Object.values(S.days).flatMap(d => (d.meals || []).map(x => x.place).filter(Boolean)))];
   const draw = () => {
     const p = $('#sheetPanel');
@@ -1598,11 +1619,19 @@ function mealSheet(meal, isNew) {
       <span class="eyebrow">Ce ai mâncat</span>
       ${favItems().length ? `<div class="sec"><span class="small muted">Alimente favorite: atinge ca să le adaugi</span><div class="chips">${favItems().map(f => `<button type="button" class="chip" data-favitem="${f.id}">${esc(f.name)}${f.qty ? ' · ' + esc(f.qty) : ''}</button>`).join('')}</div></div>` : ''}
       ${m.items.map((it, i) => `<div class="item-row" data-row="${i}">
-        <label class="f full">Aliment / fel<input type="text" data-k="name" value="${esc(it.name)}" placeholder="ex. ouă ochiuri"></label>
-        <label class="f">Cantitate<input type="text" data-k="qty" value="${esc(it.qty)}" placeholder="ex. 2 buc, 200 g"></label>
+        <label class="f full">Aliment / fel<input type="text" data-k="name" value="${esc(it.name)}" placeholder="ex. ceafă + cartofi + salată + sos de usturoi"></label>
+        <label class="f">Cantitate (dacă știi)<input type="text" data-k="qty" value="${esc(it.qty)}" placeholder="ex. 200 g"></label>
         <label class="f">Brand<input type="text" data-k="brand" value="${esc(it.brand)}" placeholder="opțional"></label>
         <label class="f">Preparare<select data-k="prep">${PREP.map(p => `<option value="${p}" ${it.prep === p ? 'selected' : ''}>${p || '—'}</option>`).join('')}</select></label>
-        <div class="row" style="align-self:end"><button class="btn sm ghost" data-star="${i}" title="Salvează alimentul la favorite">★ Favorit</button><button class="btn sm ghost" data-rm="${i}">Scoate</button></div>
+        <label class="f full">Ce conține (opțional, fără cantități)<input type="text" data-k="ingredients" value="${esc(it.ingredients)}" placeholder="ex. pui, ceapă, ardei, orez, ulei"></label>
+        ${m.est?.items?.[i]?.found ? `<p class="note full">Din meniu: ${esc(m.est.items[i].found)}</p>` : ''}
+        <div class="item-photos full">
+          ${it.photos.length ? `<div class="thumbs">${it.photos.map((ph, j) => `<span class="ph-thumb"><img data-photo="${esc(ph.path)}" alt="Poză ${esc(PHK[ph.kind] || '')}"><span>${esc(PHK[ph.kind] || 'poză')}</span><button type="button" class="x" data-rmph="${i}:${j}" aria-label="Scoate poza">×</button></span>`).join('')}</div>` : ''}
+          ${last?.row === i && m.items.length > 1 ? `<div class="chips"><span class="small muted">Apare și la:</span>${m.items.map((o, k) => k === i ? '' : `<button type="button" class="chip" data-link="${k}" aria-pressed="${last.paths.every(pp => o.photos.some(x => x.path === pp))}">${esc(o.name || 'preparatul ' + (k + 1))}</button>`).join('')}</div>` : ''}
+          <div class="row"><label class="btn sm"><input type="file" accept="image/*" multiple hidden data-phrow="${i}" data-kind="farfurie">📷 Farfuria</label><label class="btn sm"><input type="file" accept="image/*" multiple hidden data-phrow="${i}" data-kind="meniu">🧾 Meniu / Glovo</label></div>
+          ${it.name && !it.qty && !it.photos.length ? '<p class="note">Fără cantitate și fără poză: estimez o porție obișnuită.</p>' : ''}
+        </div>
+        <div class="row full"><button class="btn sm ghost" data-star="${i}" title="Salvează alimentul la favorite">★ Favorit</button><button class="btn sm ghost" data-rm="${i}">Scoate</button></div>
       </div>`).join('')}
       <button class="btn sm" id="m-add">+ Încă un aliment</button>
       <div class="grid2">
@@ -1610,15 +1639,28 @@ function mealSheet(meal, isNew) {
         <label class="f">Sătul după (1–5)<select id="m-full">${['', 1, 2, 3, 4, 5].map(v => `<option value="${v}" ${m.fullness == v && v !== '' ? 'selected' : ''}>${v || '—'}</option>`).join('')}</select></label>
       </div>
       <label class="f">Notițe<textarea id="m-notes" placeholder="ex. porție mare, am lăsat jumătate din cartofi">${esc(m.notes || '')}</textarea></label>
-      <div class="sec">${m.photos.length ? `<div class="thumbs">${m.photos.map(p => `<img data-photo="${esc(p)}" alt="Poză masă">`).join('')}</div>` : ''}
-        <label class="btn sm"><input type="file" accept="image/*" multiple hidden id="m-photos">Poză farfurie, etichetă sau captură Glovo</label></div>
+      ${m.photos?.length ? `<div class="sec"><span class="small muted">Poze puse pe toată masa (varianta veche)</span><div class="thumbs">${m.photos.map(p => `<img data-photo="${esc(p)}" alt="Poză masă">`).join('')}</div></div>` : ''}
       <div class="row"><button class="btn primary" id="m-save">Salvează masa</button><button class="btn ghost" data-act="close">Renunță</button></div>`;
-    $('#m-add').onclick = () => { collect(); m.items.push({ name: '', brand: '', qty: '', prep: '' }); draw(); };
-    $$('[data-rm]', p).forEach(b => b.onclick = () => { collect(); m.items.splice(+b.dataset.rm, 1); if (!m.items.length) m.items.push({ name: '', brand: '', qty: '', prep: '' }); draw(); });
+    $('#m-add').onclick = () => { collect(); m.items.push(blank()); last = null; draw(); };
+    $$('[data-rm]', p).forEach(b => b.onclick = () => { collect(); m.items.splice(+b.dataset.rm, 1); if (!m.items.length) m.items.push(blank()); last = null; draw(); });
+    $$('[data-phrow]', p).forEach(inp => inp.onchange = async () => {
+      collect();
+      const row = +inp.dataset.phrow, paths = await uploadFiles(inp.files);
+      if (!paths.length) return;
+      m.items[row].photos.push(...paths.map(path => ({ path, kind: inp.dataset.kind })));
+      last = { row, paths, kind: inp.dataset.kind }; draw();
+    });
+    $$('[data-link]', p).forEach(b => b.onclick = () => {
+      collect();
+      const o = m.items[+b.dataset.link], on = last.paths.every(pp => o.photos.some(x => x.path === pp));
+      o.photos = on ? o.photos.filter(x => !last.paths.includes(x.path)) : [...o.photos, ...last.paths.filter(pp => !o.photos.some(x => x.path === pp)).map(path => ({ path, kind: last.kind }))];
+      draw();
+    });
+    $$('[data-rmph]', p).forEach(b => b.onclick = () => { collect(); const [i, j] = b.dataset.rmph.split(':').map(Number); m.items[i].photos.splice(j, 1); last = null; draw(); });
     $$('[data-favitem]', p).forEach(b => b.onclick = () => {
       collect();
       const f = S.favMap[b.dataset.favitem]; if (!f) return;
-      const item = { name: f.name || '', brand: f.brand || '', qty: f.qty || '', prep: f.prep || '' };
+      const item = { ...blank(), name: f.name || '', brand: f.brand || '', qty: f.qty || '', prep: f.prep || '' };
       const empty = m.items.findIndex(i => !i.name.trim());
       if (empty >= 0) m.items[empty] = item; else m.items.push(item);
       draw();
@@ -1630,11 +1672,11 @@ function mealSheet(meal, isNew) {
       saveFavItem(it);
     });
     hydratePhotos(p);
-    const ph = $('#m-photos'); if (ph) ph.onchange = async () => { collect(); const ids = await uploadFiles(ph.files); m.photos.push(...ids); draw(); };
     $('#m-save').onclick = async () => {
       collect();
-      m.items = m.items.filter(i => i.name.trim());
-      if (!m.items.length && !m.photos.length) { toast('Adaugă cel puțin un aliment sau o poză.'); return; }
+      // keep only what was filled in, so dishes without notes or photos look like before in the data
+      m.items = m.items.filter(i => i.name.trim() || i.photos.length).map(({ ingredients, photos, ...i }) => ({ ...i, ...(ingredients ? { ingredients } : {}), ...(photos.length ? { photos } : {}) }));
+      if (!m.items.length && !m.photos?.length) { toast('Adaugă cel puțin un preparat sau o poză.'); return; }
       const list = [...(S.days[S.date]?.meals || [])];
       const i = list.findIndex(x => x.id === m.id);
       if (i >= 0) { if (JSON.stringify(list[i].items) !== JSON.stringify(m.items)) delete m.est; list[i] = m; } else list.push(m);
@@ -1644,7 +1686,7 @@ function mealSheet(meal, isNew) {
   const collect = () => {
     m.type = $('#m-type').value; m.time = $('#m-time').value; m.source = $('#m-src').value; m.place = $('#m-place').value.trim();
     m.hunger = toNum($('#m-hunger').value); m.fullness = toNum($('#m-full').value); m.notes = $('#m-notes').value.trim();
-    m.items = $$('#sheetPanel [data-row]').map(r => { const o = {}; $$('[data-k]', r).forEach(x => o[x.dataset.k] = x.value.trim()); return o; });
+    m.items = $$('#sheetPanel [data-row]').map((r, i) => { const o = { photos: m.items[i]?.photos || [] }; $$('[data-k]', r).forEach(x => o[x.dataset.k] = x.value.trim()); return o; });
   };
   openSheet(); draw();
 }
@@ -1696,7 +1738,7 @@ function starSheet(meal) {
     <div class="row"><button class="btn primary" id="f-save">Salvează</button></div>`;
   $('#f-save').onclick = async () => {
     const id = uid(); closeSheet();
-    await saveTo('favorites.json', id, { name: $('#f-name')?.value?.trim() || def, type: meal.type, source: meal.source, place: meal.place || '', items: meal.items || [] });
+    await saveTo('favorites.json', id, { name: $('#f-name')?.value?.trim() || def, type: meal.type, source: meal.source, place: meal.place || '', items: (meal.items || []).map(({ photos, ...i }) => i) });
     toast('Favorit notat. Îl trimiți cu butonul de jos.');
   };
 }
