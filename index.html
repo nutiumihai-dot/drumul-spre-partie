@@ -104,10 +104,6 @@ button { cursor: pointer; }
 .top .hicons [aria-current="page"] { background: var(--accent-2); color: var(--night); border-color: var(--accent-2); }
 .hicons [data-badge]:not([data-badge=""])::after { content: attr(data-badge); position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid var(--night); }
 .brand .brand-meta { flex-basis: 100%; }
-@media (max-width: 999px) {
-  .tabs .wrap { grid-template-columns: repeat(5, 1fr); }
-  .tabs [data-tab="mesaje"], .tabs [data-tab="profil"] { display: none; }
-}
 @media (min-width: 1000px) { .hicons { display: none; } }
 .hpill.hot b { color: #fff; }
 .alt { display: flex; flex-direction: column; gap: 2px; }
@@ -129,6 +125,11 @@ button { cursor: pointer; }
 main { padding-block: 16px calc(92px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
 .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); box-shadow: 0 -4px 20px rgba(13, 22, 38, .08); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
 .tabs .wrap { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding-block: 6px; }
+/* on phones Mesaje and Profil live in the header, so the bar has 5 tabs */
+@media (max-width: 999px) {
+  .tabs .wrap { grid-template-columns: repeat(5, 1fr); }
+  .tabs [data-tab="mesaje"], .tabs [data-tab="profil"] { display: none; }
+}
 .tabs button { border: 0; background: none; padding: 6px 0 5px; border-radius: 12px; font-size: 11px; font-weight: 600; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .tabs svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .tabs button[aria-current="page"] { color: var(--accent); }
@@ -676,7 +677,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v23';
+const APP_VERSION = 'v24';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
