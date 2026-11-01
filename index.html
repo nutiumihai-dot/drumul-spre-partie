@@ -656,7 +656,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v18';
+const APP_VERSION = 'v19';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -1950,19 +1950,24 @@ function msgSheet() {
 // rep items use `cadence` [[word, seconds], ...] in execution order, from the plan item or the catalog.
 let WO = null, PLAY = null, LOCK = null, AC = null;
 const WO_OPTS = store.get('dsp-wo', { voice: true, tick: true });
-const NUM = 'unu doi trei patru cinci șase șapte opt nouă zece unsprezece doisprezece treisprezece paisprezece cincisprezece șaisprezece șaptesprezece optsprezece nouăsprezece douăzeci'.split(' ');
+// Spoken cues are in English (the Romanian TTS voices sound bad); the screen stays in Romanian.
+// Cadence words come from the catalog in Romanian and are translated here; COACH.md limits them to this list.
+const SAY_EN = { 'coboară': 'down', 'urcă': 'up', 'ridică': 'lift', 'împinge': 'push', 'trage': 'pull', 'pauză': 'pause', 'ține': 'hold', 'întinde': 'extend',
+  'îndoaie': 'bend', 'desface': 'apart', 'revino': 'back', 'rotește': 'rotate', 'peste': 'over', 'înapoi': 'back', 'deschide': 'open', 'închide': 'close',
+  'atinge': 'tap', 'pas': 'step', 'apropie': 'together' };
+const sayWord = w => SAY_EN[w.toLowerCase()] || w;
 const SIDE_RE = /\/\s*(parte|picior|braț|brat)/i;
 async function lockScreen() {
   try { if ('wakeLock' in navigator && !LOCK) { LOCK = await navigator.wakeLock.request('screen'); LOCK.addEventListener('release', () => { LOCK = null; }); } } catch (e) {}
 }
 function releaseLock() { try { LOCK?.release(); } catch (e) {} LOCK = null; }
-const roVoice = () => ('speechSynthesis' in window ? speechSynthesis.getVoices().find(v => /^ro/i.test(v.lang)) : null) || null;
+const enVoice = () => { if (!('speechSynthesis' in window)) return null; const vs = speechSynthesis.getVoices(); return vs.find(v => v.lang === 'en-US') || vs.find(v => /^en/i.test(v.lang)) || null; };
 function say(text) {
   if (!WO_OPTS.voice || !('speechSynthesis' in window)) return;
   try {
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text); u.lang = 'ro-RO'; u.rate = 1.15;
-    const v = roVoice(); if (v) u.voice = v;
+    const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = 1.1;
+    const v = enVoice(); if (v) u.voice = v;
     speechSynthesis.speak(u);
   } catch (e) {}
 }
@@ -2067,8 +2072,7 @@ const mmss = s => s >= 60 ? `${Math.floor(s / 60)}:${pad(s % 60)}` : String(s);
 function drawClock() {
   const el = $('#woClock'); if (!el || !WO?.cfg) return;
   const c = WO.cfg, g = PLAY?.segs[PLAY.k], left = PLAY ? Math.max(0, Math.ceil(((PLAY.left ?? (PLAY.end - performance.now()))) / 1000)) : 0;
-  const opts = `<div class="row"><button class="chip" data-act="wo-opt" data-k="voice" aria-pressed="${!!WO_OPTS.voice}">Voce</button>${c.type === 'tempo' ? `<button class="chip" data-act="wo-opt" data-k="tick" aria-pressed="${!!WO_OPTS.tick}">Bip pe secundă</button>` : ''}</div>
-    ${WO_OPTS.voice && 'speechSynthesis' in window && speechSynthesis.getVoices().length && !roVoice() ? '<p class="note">Telefonul nu are o voce românească instalată; o adaugi din Setări › Text în vorbire (Google). Până atunci vorbește vocea implicită.</p>' : ''}`;
+  const opts = `<div class="row"><button class="chip" data-act="wo-opt" data-k="voice" aria-pressed="${!!WO_OPTS.voice}">Voce (engleză)</button>${c.type === 'tempo' ? `<button class="chip" data-act="wo-opt" data-k="tick" aria-pressed="${!!WO_OPTS.tick}">Bip pe secundă</button>` : ''}</div>`;
   const running = PLAY ? `<button class="btn" data-act="wo-pause">${PLAY.left != null ? '▶ Continuă' : 'Pauză'}</button>${c.type === 'timer' ? '<button class="btn" data-act="wo-skip">Gata mai devreme</button>' : ''}<button class="btn ghost" data-act="wo-stop">Oprește</button>` : '';
   if (c.type === 'timer') {
     const t = c.t, sideTxt = g?.side ? (g.side === 1 ? ' · prima parte' : ' · a doua parte') : '';
@@ -2126,22 +2130,22 @@ function stopPlay() {
   try { speechSynthesis.cancel(); } catch (e) {}
 }
 function startTimer() {
-  const t = WO.cfg.t, sides = t.perSide ? 2 : 1, segs = [{ kind: 'ready', sec: 3, label: 'Pregătește-te', say: 'Pregătește-te' }];
+  const t = WO.cfg.t, sides = t.perSide ? 2 : 1, segs = [{ kind: 'ready', sec: 3, label: 'Pregătește-te', say: 'Get ready' }];
   for (let s = 1; s <= t.sets; s++) for (let side = 1; side <= sides; side++) {
-    segs.push({ kind: 'work', sec: t.work, label: 'Lucru', set: s, side: t.perSide ? side : 0, say: side === 2 ? 'A doua parte' : s === 1 ? 'Start' : `Seria ${s}` });
-    if (side < sides) segs.push({ kind: 'rest', sec: 5, label: 'Schimbă partea', set: s, side, say: 'Schimbă partea' });
-    else if (s < t.sets && t.rest) segs.push({ kind: 'rest', sec: t.rest, label: 'Pauză', set: s, say: `Pauză, ${t.rest} secunde` });
+    segs.push({ kind: 'work', sec: t.work, label: 'Lucru', set: s, side: t.perSide ? side : 0, say: side === 2 ? 'Other side' : s === 1 ? 'Go' : `Set ${s}` });
+    if (side < sides) segs.push({ kind: 'rest', sec: 5, label: 'Schimbă partea', set: s, side, say: 'Switch sides' });
+    else if (s < t.sets && t.rest) segs.push({ kind: 'rest', sec: t.rest, label: 'Pauză', set: s, say: `Rest, ${t.rest} seconds` });
   }
-  play(segs, () => { say('Gata'); beep(990, .3); });
+  play(segs, () => { say('Done'); beep(990, .3); });
 }
 function startTempo() {
   const c = WO.cfg, r = c.r, sides = r.perSide ? 2 : 1, total = r.sets * sides;
-  const k = c.setIdx, label = `Seria ${Math.floor(k / sides) + 1}${r.perSide ? (k % 2 ? ', a doua parte' : ', prima parte') : ''}`;
-  const segs = [{ kind: 'ready', sec: 3, label: 'Pregătește-te', say: label }];
-  for (let n = 1; n <= (r.reps || 10); n++) c.cad.forEach(([w, sec], j) => segs.push({ kind: 'phase', sec, label: w, ph: j, rep: n, say: j === 0 ? `${NUM[n - 1] || n}, ${w}` : w }));
+  const k = c.setIdx;
+  const segs = [{ kind: 'ready', sec: 3, label: 'Pregătește-te', say: `Set ${Math.floor(k / sides) + 1}${r.perSide ? (k % 2 ? ', second side' : ', first side') : ''}` }];
+  for (let n = 1; n <= (r.reps || 10); n++) c.cad.forEach(([w, sec], j) => segs.push({ kind: 'phase', sec, label: w, ph: j, rep: n, say: j === 0 ? `${n}, ${sayWord(w)}` : sayWord(w) }));
   play(segs, () => {
     c.setIdx++; beep(990, .3);
-    say(c.setIdx >= total ? 'Gata exercițiul' : r.perSide && c.setIdx % 2 ? 'Schimbă partea' : 'Gata seria');
+    say(c.setIdx >= total ? 'Exercise done' : r.perSide && c.setIdx % 2 ? 'Switch sides' : 'Set done');
   });
 }
 
