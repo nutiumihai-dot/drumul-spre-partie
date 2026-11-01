@@ -96,6 +96,19 @@ button { cursor: pointer; }
 .hpill { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--night-muted); border: 1px solid rgba(255, 255, 255, .18); border-radius: 999px; padding: 4px 10px; background: transparent; }
 .hpill b { color: var(--night-fg); font-family: var(--font-display); font-size: 15px; letter-spacing: 0; }
 .hpill.hot { background: var(--accent); border-color: var(--accent); color: #fff; }
+.hphase { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--night-muted); }
+.hphase b { color: var(--night-fg); }
+.hicons { display: flex; gap: 8px; margin-left: auto; }
+.hicons .iconbtn { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.hicons svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.top .hicons [aria-current="page"] { background: var(--accent-2); color: var(--night); border-color: var(--accent-2); }
+.hicons [data-badge]:not([data-badge=""])::after { content: attr(data-badge); position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid var(--night); }
+.brand .brand-meta { flex-basis: 100%; }
+@media (max-width: 999px) {
+  .tabs .wrap { grid-template-columns: repeat(5, 1fr); }
+  .tabs [data-tab="mesaje"], .tabs [data-tab="profil"] { display: none; }
+}
+@media (min-width: 1000px) { .hicons { display: none; } }
 .hpill.hot b { color: #fff; }
 .alt { display: flex; flex-direction: column; gap: 2px; }
 .alt-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12px; color: var(--night-muted); }
@@ -391,6 +404,10 @@ details.more[open] summary { margin-bottom: 8px; }
   <div class="wrap">
     <div class="brand">
       <span class="brand-name">Summit <span>Building</span></span>
+      <span class="hicons" id="hicons">
+        <button class="iconbtn" data-act="tab" data-tab="mesaje" aria-label="Mesaje"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg></button>
+        <button class="iconbtn" data-act="tab" data-tab="profil" aria-label="Profil"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></button>
+      </span>
       <span class="brand-meta" id="brandMeta"></span>
     </div>
     <div class="alt" id="altitude"></div>
@@ -659,7 +676,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v21';
+const APP_VERSION = 'v22';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -851,7 +868,7 @@ Acum: ${fmtDate(t)}, ora ${pad(now.getHours())}:${pad(now.getMinutes())}.
 
 Răspunde în română: întâi feedback-ul pentru Mihai, scurt (3–6 rânduri). Apoi, la final, UN SINGUR bloc \`\`\`json cu exact structura de mai jos; omite cheile de care nu ai nevoie.
 {
- "messages": [{"id": "${t}-manual", "date": "${t}", "kind": "feedback", "title": "max 6 cuvinte", "body": "2–4 rânduri"}],
+ "messages": [{"id": "${t}-manual", "date": "${t}", "kind": "feedback", "topic": "antrenament|general", "title": "max 6 cuvinte", "body": "2–4 rânduri"}],
  "meals_est": {"AAAA-LL-ZZ": {"<id masă existent>": {"kcal": 0, "protein": 0, "items": [{"kcal": 0, "protein": 0, "src": "cantitate|meniu|poza|tipic", "found": "opțional: ce ai citit din captura de meniu"}], "note": "opțional"}}},
  "coach": {"AAAA-LL-ZZ": {"kcal": 0, "protein": 0, "foodNote": "1–2 propoziții"}},
  "plans": {"AAAA-LL-ZZ": {"sesiune completă, în același format ca planurile de mai jos": "..."}},
@@ -907,7 +924,7 @@ function parseCoachAnswer(text) {
   const ops = [], preview = [];
   (j.messages || []).forEach(m => {
     if (!isObj(m) || !isDate(m.date) || typeof m.id !== 'string' || !/^[\w.-]{6,60}$/.test(m.id) || typeof m.title !== 'string' || typeof m.body !== 'string') throw new Error('Un mesaj nu are formatul corect (id, date, title, body).');
-    const msg = { id: m.id, date: m.date, kind: ['feedback', 'zilnic', 'săptămânal'].includes(m.kind) ? m.kind : 'feedback', title: m.title.slice(0, 120), body: m.body.slice(0, 3000), ts: new Date().toISOString() };
+    const msg = { id: m.id, date: m.date, kind: ['feedback', 'zilnic', 'săptămânal'].includes(m.kind) ? m.kind : 'feedback', ...(['antrenament', 'general'].includes(m.topic) ? { topic: m.topic } : {}), title: m.title.slice(0, 120), body: m.body.slice(0, 3000), ts: new Date().toISOString() };
     ops.push({ file: `messages/${m.date.slice(0, 7)}.json`, key: m.id, replace: true, patch: msg });
     preview.push(['Mesaj nou', `${msg.title}`]);
   });
@@ -1058,16 +1075,16 @@ function maxPain(day) {
 
 /* ---------- header ---------- */
 function renderChrome() {
-  $$('#tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === S.tab ? 'page' : 'false'));
+  $$('#tabs button, #hicons button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === S.tab ? 'page' : 'false'));
   if (S.tab === 'mesaje') markSeen();
-  const un = unreadCount(); const mb = $('#tabs [data-tab="mesaje"]'); if (mb) mb.dataset.badge = un ? String(un) : '';
+  const un = unreadCount(); $$('[data-tab="mesaje"]').forEach(mb => mb.dataset.badge = un ? String(un) : '');
   $('#datebar').hidden = !(S.tab === 'azi' || S.tab === 'mancare');
   const t = today();
   $('#dateLabel').textContent = S.date === t ? `Azi · ${fmtShort(t)}` : fmtDate(S.date);
   const ph = currentPhase();
   const sb = S.profile?.snowboard;
   let meta = '';
-  if (ph) meta += `<span class="hpill">${esc(ph.name)}</span>`;
+  if (ph) meta += `<span class="hphase">Faza: <b>${esc(ph.name)}</b></span>`;
   if (sb?.date) meta += `<span class="hpill hot"><b>${daysBetween(t, sb.date)}</b> zile până la pârtie</span>`;
   if (GH.token) {
     const q = QUEUE.length, off = S.sync === 'offline' || navigator.onLine === false;
@@ -1752,7 +1769,7 @@ const readIds = () => store.get('dsp-read', []);
 const unreadMsgs = () => { const s = Date.parse(seenAt()) || 0, r = readIds(); return S.messages.filter(m => (Date.parse(m.ts) || 0) > s && !r.includes(m.id)); };
 const unreadCount = () => unreadMsgs().length;
 function markRead(id) { store.set('dsp-read', [...readIds().filter(x => S.messages.some(m => m.id === x)), id]); }
-const msgLabel = m => m.kind === 'zilnic' ? 'Rezumatul zilei' : m.kind === 'săptămânal' ? 'Rezumat' : m.kind === 'raspuns' ? 'Răspuns' : '';
+const msgLabel = m => m.kind === 'zilnic' ? 'Concluzia zilei' : m.kind === 'săptămânal' ? 'Rezumat' : m.kind === 'raspuns' ? 'Răspuns' : m.topic === 'antrenament' ? 'Antrenament' : '';
 function inboxHTML() {
   const un = unreadMsgs();
   const rows = un.slice(0, 5).map(m => `<button class="inbox-row" data-act="msg-open" data-id="${esc(m.id)}"><strong>${msgLabel(m) ? esc(msgLabel(m)) + ' · ' : ''}${esc(m.title || '')}</strong><span>${esc((m.body || '').split('\n')[0])}</span></button>`).join('');
@@ -1786,15 +1803,20 @@ function loopHTML() {
   if (!waiting) h += '<span><button class="linkbtn small" data-act="manual">Laptopul e închis? Antrenor fără PC</button></span>';
   return h + '</div>';
 }
+// Categories: kind 'zilnic' / 'săptămânal' / 'raspuns', and for kind 'feedback' the coach's `topic` ('antrenament' | 'general').
+const MSG_CATS = [['', 'Toate'], ['zilnic', 'Concluzia zilei'], ['antrenament', 'Antrenament'], ['rezumat', 'Rezumate'], ['raspuns', 'Răspunsuri'], ['general', 'Generale']];
+const msgCat = m => m.kind === 'zilnic' ? 'zilnic' : m.kind === 'săptămânal' ? 'rezumat' : m.kind === 'raspuns' ? 'raspuns' : m.topic === 'antrenament' ? 'antrenament' : 'general';
 function viewMessages() {
+  const cat = S.msgCat || '';
   const items = [
-    ...S.messages.map(m => ({ who: 'coach', ts: m.ts, date: m.date, m })),
-    ...S.requests.map(r => ({ who: 'me', ts: r.ts, date: r.date, r }))
+    ...S.messages.filter(m => !cat || msgCat(m) === cat).map(m => ({ who: 'coach', ts: m.ts, date: m.date, m })),
+    ...(!cat || cat === 'raspuns' ? S.requests.map(r => ({ who: 'me', ts: r.ts, date: r.date, r })) : [])
   ].sort((a, b) => (Date.parse(b.ts) || 0) - (Date.parse(a.ts) || 0));
   let h = `<div class="v v-mesaje"><section class="card"><h2>Scrie-i antrenorului</h2>
     <textarea id="askText" placeholder="ex. pune-mi mâine un full-body de activare · azi am doar 30 de minute · ce pot mânca la o nuntă?"></textarea>
-    <div class="row"><button class="btn primary" data-act="ask-send">Trimite</button><span class="muted small">Îți răspund la următoarea verificare (din oră în oră, cât PC-ul e pornit).</span></div></section>`;
-  if (!items.length) h += `<section class="card flat"><p class="empty">Încă nu sunt mesaje.</p></section>`;
+    <div class="row"><button class="btn primary" data-act="ask-send">Trimite</button><span class="muted small">Îți răspund la următoarea verificare (din oră în oră, cât PC-ul e pornit).</span></div></section>
+    <div class="chips">${MSG_CATS.map(([k, n]) => { const c = k ? S.messages.filter(m => msgCat(m) === k).length : S.messages.length; return `<button class="chip" data-act="msg-cat" data-cat="${k}" aria-pressed="${cat === k}">${n}${c ? ` · ${c}` : ''}</button>`; }).join('')}</div>`;
+  if (!items.length) h += `<section class="card flat"><p class="empty">${cat ? 'Niciun mesaj în categoria asta.' : 'Încă nu sunt mesaje.'}</p></section>`;
   let lastDay = '';
   items.forEach(it => {
     if (it.date !== lastDay) { lastDay = it.date; h += `<h3 class="day-sep">${esc(fmtDate(it.date || today()))}</h3>`; }
@@ -2194,6 +2216,7 @@ document.addEventListener('click', async e => {
     await sendAll();
   }
   else if (a === 'push-on') enablePush(b);
+  else if (a === 'msg-cat') { S.msgCat = b.dataset.cat; render(); }
   else if (a === 'msg-open') { msgOpen(b.dataset.id); if (S.tab === 'azi') render(); }
   else if (a === 'wo-open') woOpen(b.dataset.date);
   else if (a === 'wo-close') woClose();
