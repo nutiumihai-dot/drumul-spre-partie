@@ -309,6 +309,42 @@ details.more summary { cursor: pointer; font-size: 14px; font-weight: 600; color
 details.more[open] summary { margin-bottom: 8px; }
 .ch-row { box-shadow: none; border: 1px solid var(--line); gap: 8px; }
 
+/* coach inbox and loop status */
+.inbox-row { display: flex; flex-direction: column; gap: 2px; text-align: left; border: 0; border-left: 4px solid var(--accent); background: var(--surface-2); border-radius: 4px 12px 12px 4px; padding: 8px 12px; width: 100%; }
+.inbox-row span { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.loop { font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
+.loop b { color: var(--fg); }
+.loop .wait { color: var(--warn); font-weight: 600; }
+.pill.pend { background: var(--surface-2); color: var(--muted); font-weight: 600; }
+
+/* workout mode: one exercise per screen, timers and spoken tempo */
+.wo { position: fixed; inset: 0; z-index: 15; background: var(--bg); display: flex; flex-direction: column; }
+.wo-top { background: var(--night); color: var(--night-fg); padding: calc(env(safe-area-inset-top, 0px) + 10px) max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); display: flex; align-items: center; gap: 10px; }
+.wo-top .iconbtn { color: var(--night-fg); background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .18); flex: none; }
+.wo-top .t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.wo-top .t span { font-size: 12px; color: var(--night-muted); }
+.wo-top .t b { font-family: var(--font-display); font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wo-prog { height: 4px; background: var(--surface-2); }
+.wo-prog i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.wo-body { flex: 1; overflow-y: auto; }
+.wo-body .wrap { padding-block: 16px; display: flex; flex-direction: column; gap: 14px; }
+.wo-name { font-family: var(--font-display); font-weight: 700; font-size: 32px; line-height: 1.05; background: none; border: 0; padding: 0; text-align: left; color: var(--fg); }
+.wo-nav { border-top: 1px solid var(--line); background: var(--surface); padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; }
+.wo-nav .n { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.clock { text-align: center; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.clock .big { font-family: var(--font-display); font-weight: 700; font-size: 84px; line-height: 1; font-variant-numeric: tabular-nums; }
+.clock .ph { font-family: var(--font-display); font-weight: 700; font-size: 34px; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); }
+.clock .ph.rest { color: var(--c-out); }
+.clock .sub { font-size: 14px; font-weight: 600; color: var(--muted); }
+.clock .row { justify-content: center; }
+.cad { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.cad span { font-size: 13px; font-weight: 700; border-radius: 8px; padding: 4px 10px; background: var(--surface-2); }
+.cad span.on { background: var(--accent); color: #fff; }
+.wo-list { display: flex; flex-direction: column; }
+.wo-list button { border: 0; border-top: 1px solid var(--line); background: none; text-align: left; padding: 10px 0; display: flex; gap: 10px; }
+.wo-list button.cur { color: var(--accent); font-weight: 700; }
+.wo-list .k { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 22px; }
+
 /* views: one column on phones; columns, side rail and wide header on desktop */
 .v, .col-a, .col-b, .charts, .weeks { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 @media (min-width: 1000px) {
@@ -377,6 +413,7 @@ details.more[open] summary { margin-bottom: 8px; }
     <button data-act="tab" data-tab="profil"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Profil</button>
   </div>
 </nav>
+<div class="wo" id="wo" hidden role="dialog" aria-modal="true" aria-label="Antrenament"></div>
 <div class="sheet" id="sheet" hidden><div class="sheet-panel" id="sheetPanel" role="dialog" aria-modal="true"></div></div>
 <div class="toast" id="toast" hidden></div>
 
@@ -619,8 +656,9 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v17';
+const APP_VERSION = 'v18';
 const PHOTO_BRANCH = 'poze';
+let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
   for (let attempt = 0; attempt < 3; attempt++) {
     let head = null, baseTree = null;
@@ -633,7 +671,7 @@ async function commitTo(branch, build, message) {
     const u = head
       ? await gh(`/git/refs/heads/${branch}`, { method: 'PATCH', body: JSON.stringify({ sha: c.sha, force: false }) })
       : await gh('/git/refs', { method: 'POST', body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: c.sha }) });
-    if (u.ok) return written || {};
+    if (u.ok) { LAST_COMMIT = c; return written || {}; }
     if (u.status !== 422 && u.status !== 409) throw new GhError(u.status, await u.text());
   }
   throw new GhError(409, 'conflict');
@@ -696,6 +734,7 @@ async function sendAll(ops = [...QUEUE], message = commitMessage(ops), fromQueue
         return { entries, written };
       }, message);
       Object.entries(written).forEach(([f, data]) => FILES[f] = { sha: null, data });
+      if (fromQueue) store.set('dsp-sent', LAST_COMMIT?.committer?.date || new Date().toISOString());
     }
     if (fromQueue) { QUEUE = QUEUE.filter(o => !ops.includes(o)); saveQueue(); }
     photos.forEach(o => { if (!PHOTO[o.file]) PHOTO[o.file] = `data:image/jpeg;base64,${o.b64}`; });
@@ -744,7 +783,7 @@ function cacheLoad() {
 }
 function derive() {
   S.requests = Object.values(S.reqMap || {}).sort((a, b) => (Date.parse(b.ts) || 0) - (Date.parse(a.ts) || 0));
-  S.messages = Object.values(S.msgMap || {}).sort((a, b) => (Date.parse(b.ts) || 0) - (Date.parse(a.ts) || 0));
+  S.messages = Object.entries(S.msgMap || {}).map(([id, m]) => ({ id, ...m })).sort((a, b) => (Date.parse(b.ts) || 0) - (Date.parse(a.ts) || 0));
   S.favorites = Object.entries(S.favMap || {}).map(([id, f]) => ({ id, ...f }));
 }
 const monthsBetween = (a, b) => { const out = []; let m = a.slice(0, 7); const end = b.slice(0, 7); while (m <= end) { out.push(m); const [y, mm] = m.split('-').map(Number); m = mm === 12 ? `${y + 1}-01` : `${y}-${pad(mm + 1)}`; } return out; };
@@ -1026,7 +1065,9 @@ function renderChrome() {
   if (ph) meta += `<span class="hpill">${esc(ph.name)}</span>`;
   if (sb?.date) meta += `<span class="hpill hot"><b>${daysBetween(t, sb.date)}</b> zile până la pârtie</span>`;
   if (GH.token) {
-    const st = { ok: '↻ Actualizat', sending: '↑ Se trimite…', loading: '↻ Se încarcă…', offline: '↻ Offline', error: '↻ Eroare · reîncearcă', auth: 'Verifică tokenul' }[S.sync] || '↻';
+    const q = QUEUE.length, off = S.sync === 'offline' || navigator.onLine === false;
+    const st = off ? `⚠ Offline${q ? ` · ${q} netrimise` : ''}`
+      : ({ sending: '↑ Se trimite…', loading: '↻ Se încarcă…', error: '↻ Eroare · reîncearcă', auth: 'Verifică tokenul' }[S.sync] || (q ? `● ${q} netrimise` : '✓ Totul trimis'));
     meta += `<button class="hpill sync ${S.sync === 'error' || S.sync === 'auth' ? 'bad' : ''}" data-act="pull" title="Descarcă noutățile din GitHub">${st}</button>`;
   }
   const n = pendingGroups().length;
@@ -1114,8 +1155,7 @@ function viewAzi() {
 
   h += todayHero(d, day);
   if (d === t) {
-    const m = S.messages[0];
-    if (m) h += `<section class="card"><div class="row between"><span class="eyebrow">Mesaj de la Claude · ${esc(fmtShort(m.date || t))}</span><button class="linkbtn small" data-act="tab" data-tab="mesaje">Toate mesajele</button></div><div class="msg"><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></div><button class="linkbtn small" data-act="manual">Laptopul e închis? Antrenor fără PC</button></section>`;
+    h += inboxHTML();
     h += yesterdayHTML(d);
   }
 
@@ -1138,11 +1178,10 @@ function viewAzi() {
 
   // workout
   const plan = S.plans[d];
-  const useFb = S.fallback[d] || day.log?.completed === 'minim';
-  const session = useFb ? S.profile?.fallback : plan;
+  const { session, useFb } = sessionFor(d);
   const hasBlocks = session?.blocks?.length;
   if (session && (hasBlocks || session.notes)) {
-    h += sessionHTML(session, day, useFb);
+    h += sessionHTML(session, day, useFb, d);
   } else {
     h += `<section class="card flat"><h2>Niciun antrenament planificat</h2><p class="muted">${plan?.notes ? '' : 'Planul pentru ziua asta apare după generarea săptămânii.'}</p></section>`;
   }
@@ -1158,10 +1197,21 @@ function viewAzi() {
 }
 
 const SESS = { REFACERE: 'var(--c-out)', A: 'var(--c-a)', B: 'var(--c-b)', C: 'var(--c-c)', D: 'var(--c-d)', FB: 'var(--c-c)', CIR: 'var(--c-a)', REACT: 'var(--c-out)', 'AFARĂ': 'var(--c-out)', 'ÎNOT': 'var(--c-out)', 'CLASĂ': 'var(--c-d)' };
+function sessionFor(d) {
+  const useFb = !!(S.fallback[d] || S.days[d]?.log?.completed === 'minim');
+  return { session: useFb ? S.profile?.fallback : S.plans[d], useFb };
+}
 function loggedSomething(day) { return !!day && (day.weight != null || day.steps != null || (day.meals || []).length || day.log?.completed || day.outdoor); }
+// One missed day per 7 days does not break the streak; two within a week do.
 function streak() {
   let d = today(); if (!loggedSomething(S.days[d])) d = addDays(d, -1);
-  let n = 0; while (loggedSomething(S.days[d])) { n++; d = addDays(d, -1); }
+  let n = 0, gap = null;
+  for (let i = 0; i < 1000; i++, d = addDays(d, -1)) {
+    if (loggedSomething(S.days[d])) { n++; continue; }
+    if (gap && daysBetween(d, gap) < 7) break;
+    if (!loggedSomething(S.days[addDays(d, -1)])) break;
+    gap = d;
+  }
   return n;
 }
 function todayHero(d, day) {
@@ -1178,12 +1228,13 @@ function todayHero(d, day) {
   return `<section class="card"><div class="today-hero">
     <div class="ring"><svg viewBox="0 0 92 92"><circle class="trk" cx="46" cy="46" r="40"/><circle class="val" cx="46" cy="46" r="40" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg><div class="lbl"><b>${done}/${checks.length}</b><span>bifate</span></div></div>
     <div class="sec"><div class="checks">${checks.map(([n, on]) => `<span class="${on ? 'on' : ''}"><i>${on ? '✓' : ''}</i>${n}</span>`).join('')}</div>
-    <div class="streak"><b>${st}</b> ${st === 1 ? 'zi' : 'zile'} la rând cu jurnalul completat</div></div>
+    <div class="streak"><b>${st}</b> ${st === 1 ? 'zi' : 'zile'} la rând cu jurnalul completat</div><span class="muted small">O zi ratată pe săptămână nu rupe seria.</span></div>
   </div></section>`;
 }
-function sessionHTML(p, day, isFb) {
+function sessionHTML(p, day, isFb, d) {
   const col = SESS[p.code] || 'var(--accent)';
-  let h = `<section class="card session-head" style="--sess:${col}"><span class="code" aria-hidden="true">${esc(isFb ? 'MIN' : (p.code === 'AFARĂ' ? '' : p.code || ''))}</span><div class="row between"><span class="eyebrow">${esc(p.phase || (isFb ? 'Varianta minimă' : ''))}</span>${p.durationMin ? `<span class="pill">~${p.durationMin} min</span>` : ''}</div><h2>${esc(p.title || 'Antrenament')}</h2>${isFb ? '' : `<span class="gain">+${p.code === 'AFARĂ' ? ALT_RULES.outdoor : ALT_RULES.complet} m dacă o duci la capăt</span>`}${p.coachNote ? `<p class="muted">${esc(p.coachNote)}</p>` : ''}</section>`;
+  let h = `<section class="card session-head" style="--sess:${col}"><span class="code" aria-hidden="true">${esc(isFb ? 'MIN' : (p.code === 'AFARĂ' ? '' : p.code || ''))}</span><div class="row between"><span class="eyebrow">${esc(p.phase || (isFb ? 'Varianta minimă' : ''))}</span>${p.durationMin ? `<span class="pill">~${p.durationMin} min</span>` : ''}</div><h2>${esc(p.title || 'Antrenament')}</h2>${isFb ? '' : `<span class="gain">+${p.code === 'AFARĂ' ? ALT_RULES.outdoor : ALT_RULES.complet} m dacă o duci la capăt</span>`}${p.coachNote ? `<p class="muted">${esc(p.coachNote)}</p>` : ''}
+    ${p.blocks?.length ? `<button class="btn" data-act="wo-open" data-date="${d}" style="align-self:flex-start">▶ Deschide antrenamentul</button>` : ''}</section>`;
   if (p.setup?.length) h += `<section class="card setup"><span class="eyebrow">Asamblează înainte de start</span><ul>${p.setup.map(s => `<li>${esc(s)}</li>`).join('')}</ul></section>`;
   if (p.notes?.length) h += `<section class="card info"><ul>${p.notes.map(s => `<li>${esc(s)}</li>`).join('')}</ul></section>`;
   (p.blocks || []).forEach(b => {
@@ -1198,13 +1249,17 @@ function sessionHTML(p, day, isFb) {
   return h;
 }
 
-function itemHTML(it, day) {
-  const name = it.name || S.catalog[it.ex]?.name || it.ex;
+function itemPills(it) {
   const pills = [];
   if (it.sets) pills.push(`${it.sets} × ${esc(it.reps || '')}`); else if (it.dose) pills.push(esc(it.dose));
   if (it.load) pills.push(`<span class="pill load">${esc(it.load)}</span>`);
   if (it.tempo) pills.push(`tempo ${esc(it.tempo)}`);
   if (it.rest) pills.push(`pauză ${esc(it.rest)}`);
+  return pills;
+}
+function itemHTML(it, day) {
+  const name = it.name || S.catalog[it.ex]?.name || it.ex;
+  const pills = itemPills(it);
   const ch = day.log?.changes?.[it.ex];
   const rj = day.rejects?.[it.ex];
   const canReject = S.date >= today() && !rj;
@@ -1272,7 +1327,7 @@ function doneHTML(day, session, isFb, d) {
   const status = l.completed === 'sarit' ? `Nu l-ai făcut${l.skipReason ? ' · ' + l.skipReason : ''}`
     : l.completed === 'minim' ? 'Ai făcut varianta minimă'
     : l.completed ? (nCh ? `Făcut, cu ${nCh} ${nCh === 1 ? 'modificare' : 'modificări'}${l.completed === 'partial' ? ' (parțial)' : ''}` : 'Făcut complet, ca în plan') : '';
-  let h = `<section class="card"><h2>Cum a mers</h2>
+  let h = `<section class="card" id="logCard"><h2>Cum a mers</h2>
     ${status ? `<p class="done-status">${esc(status)}</p>` : ''}
     <div class="row">
       <button class="btn primary" data-act="done-all">${isFb ? 'Am făcut varianta minimă' : 'Am făcut tot, ca în plan'}</button>
@@ -1515,7 +1570,8 @@ function viewFood() {
         <ul>${(m.items || []).map(i => `<li>${esc(i.name)}${i.brand ? ` <span class="muted">(${esc(i.brand)})</span>` : ''}${i.qty ? ` · ${esc(i.qty)}` : ''}${i.prep ? ` · ${esc(i.prep)}` : ''}</li>`).join('')}</ul>
         ${m.notes ? `<p class="note">${esc(m.notes)}</p>` : ''}
         ${m.photos?.length ? `<div class="thumbs">${m.photos.map(thumb).join('')}</div>` : ''}
-        ${m.est ? `<div class="ex-meta"><span class="pill load">~${fmtN(m.est.kcal, 0)} kcal</span><span class="pill">~${fmtN(m.est.protein, 0)} g proteine</span></div>` : ''}
+        ${m.est ? `<div class="ex-meta"><span class="pill load">~${fmtN(m.est.kcal, 0)} kcal</span><span class="pill">~${fmtN(m.est.protein, 0)} g proteine</span></div>`
+          : `<div class="ex-meta"><span class="pill pend">${QUEUE.some(o => o.key === S.date && o.file.startsWith('days/')) ? 'netrimisă încă' : 'estimare în așteptare'}</span></div>`}
         ${m.est?.note ? `<p class="note">${esc(m.est.note)}</p>` : ''}
         <div class="row">${S.confirm === m.id
           ? `<span class="small">Ștergi masa?</span><button class="btn sm danger" data-act="meal-del" data-id="${m.id}">Da, șterge</button><button class="btn sm ghost" data-act="cancel">Nu</button>`
@@ -1652,7 +1708,45 @@ function starSheet(meal) {
 let SEEN = '';
 const seenAt = () => { try { return SEEN || localStorage.getItem('dsp-seen') || ''; } catch (e) { return SEEN; } };
 function markSeen() { SEEN = new Date().toISOString(); try { localStorage.setItem('dsp-seen', SEEN); } catch (e) {} }
-const unreadCount = () => { const s = Date.parse(seenAt()) || 0; return S.messages.filter(m => (Date.parse(m.ts) || 0) > s).length; };
+// Messages opened from the inbox on Azi count as read one by one; opening the Mesaje tab marks everything read.
+const readIds = () => store.get('dsp-read', []);
+const unreadMsgs = () => { const s = Date.parse(seenAt()) || 0, r = readIds(); return S.messages.filter(m => (Date.parse(m.ts) || 0) > s && !r.includes(m.id)); };
+const unreadCount = () => unreadMsgs().length;
+function markRead(id) { store.set('dsp-read', [...readIds().filter(x => S.messages.some(m => m.id === x)), id]); }
+const msgLabel = m => m.kind === 'zilnic' ? 'Rezumatul zilei' : m.kind === 'săptămânal' ? 'Rezumat' : m.kind === 'raspuns' ? 'Răspuns' : '';
+function inboxHTML() {
+  const un = unreadMsgs();
+  const rows = un.slice(0, 5).map(m => `<button class="inbox-row" data-act="msg-open" data-id="${esc(m.id)}"><strong>${msgLabel(m) ? esc(msgLabel(m)) + ' · ' : ''}${esc(m.title || '')}</strong><span>${esc((m.body || '').split('\n')[0])}</span></button>`).join('');
+  return `<section class="card"><div class="row between"><span class="eyebrow">De la Claude${un.length ? ` · ${un.length} ${un.length === 1 ? 'mesaj nou' : 'mesaje noi'}` : ''}</span><button class="linkbtn small" data-act="tab" data-tab="mesaje">Toate mesajele</button></div>
+    ${rows || '<p class="muted small">Nimic nou.</p>'}${un.length > 5 ? `<span class="muted small">și încă ${un.length - 5} în Mesaje</span>` : ''}
+    ${loopHTML()}</section>`;
+}
+function msgOpen(id) {
+  const m = S.messages.find(x => x.id === id); if (!m) return;
+  markRead(id); renderChrome();
+  openSheet();
+  const time = m.ts ? new Date(m.ts) : null;
+  $('#sheetPanel').innerHTML = `<div class="sheet-head"><div><span class="eyebrow">${esc(msgLabel(m) || 'Mesaj')} · ${esc(fmtDate(m.date || today()))}${time ? ' · ' + pad(time.getHours()) + ':' + pad(time.getMinutes()) : ''}</span><h2>${esc(m.title || '')}</h2></div><button class="iconbtn" data-act="close" aria-label="Închide">×</button></div>
+    <p class="pre">${esc(m.body || '')}</p>`;
+}
+// Where the loop with the coach stands: the coach writes index.json seenUpTo (date of the last app commit it processed)
+// and checkedAt (when it ran); the app remembers the date of its own last commit.
+function ago(ts) {
+  const d = new Date(ts), t = today(), ds = iso(d), hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return ds === t ? `azi, ${hm}` : ds === addDays(t, -1) ? `ieri, ${hm}` : `${fmtShort(ds)}, ${hm}`;
+}
+function loopHTML() {
+  const sent = store.get('dsp-sent', null), seen = S.index?.seenUpTo, checked = S.index?.checkedAt;
+  const waiting = sent && !(seen && Date.parse(sent) <= Date.parse(seen));
+  let h = '<div class="loop">';
+  if (checked) h += `<span>Ultima procesare: <b>${esc(ago(checked))}</b> · verific din oră în oră cât PC-ul e pornit</span>`;
+  if (waiting) {
+    h += `<span class="wait">Notițele trimise ${esc(ago(sent))} așteaptă procesarea.</span>`;
+    if (Date.now() - Date.parse(sent) > 2 * 3600e3) h += `<span>PC-ul pare închis. <button class="linkbtn small" data-act="manual">Antrenor fără PC</button></span>`;
+  } else if (sent) h += '<span>Claude a văzut tot ce ai trimis.</span>';
+  if (!waiting) h += '<span><button class="linkbtn small" data-act="manual">Laptopul e închis? Antrenor fără PC</button></span>';
+  return h + '</div>';
+}
 function viewMessages() {
   const items = [
     ...S.messages.map(m => ({ who: 'coach', ts: m.ts, date: m.date, m })),
@@ -1667,7 +1761,7 @@ function viewMessages() {
     if (it.date !== lastDay) { lastDay = it.date; h += `<h3 class="day-sep">${esc(fmtDate(it.date || today()))}</h3>`; }
     if (it.who === 'coach') {
       const m = it.m, time = m.ts ? new Date(m.ts) : null;
-      h += `<section class="card bubble coach"><div class="row between"><span class="eyebrow">Claude${time ? ' · ' + pad(time.getHours()) + ':' + pad(time.getMinutes()) : ''}</span>${m.kind && m.kind !== 'feedback' ? `<span class="pill">${esc(m.kind)}</span>` : ''}</div><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></section>`;
+      h += `<section class="card bubble coach"><div class="row between"><span class="eyebrow">Claude${time ? ' · ' + pad(time.getHours()) + ':' + pad(time.getMinutes()) : ''}</span>${msgLabel(m) ? `<span class="pill">${esc(msgLabel(m))}</span>` : ''}</div><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></section>`;
     } else {
       const r = it.r, pendingSend = QUEUE.some(o => o.key === r.id);
       h += `<section class="card bubble me"><p class="pre">${esc(r.text)}</p><span class="small muted">${pendingSend ? 'netrimis încă' : r.status === 'rezolvat' ? 'Răspuns primit' : 'Trimis · aștept răspunsul'}</span></section>`;
@@ -1771,7 +1865,7 @@ function viewCalendar() {
       const c = day.log?.completed;
       const st = c === 'complet' || c === 'partial' ? `<span class="status ok">${c === 'complet' ? 'Făcut' : 'Parțial'}</span>` : c === 'minim' ? `<span class="status min">Minim</span>` : c === 'sarit' ? `<span class="status skip">Sărit</span>` : '';
       h += `<div class="calday ${d === t ? 'today' : ''}"><div class="dn" style="--sess:${p ? SESS[p.code] || 'var(--accent)' : 'transparent'}"><small>${ZS[dt.getDay()]}</small>${dt.getDate()}</div><div class="calbody">
-        <div class="row">${p ? `<button class="linkbtn" data-act="goto" data-date="${d}">${esc(p.title)}</button>` : `<span class="muted small">fără plan</span>`}${st}${day.party ? '<span class="status">party</span>' : ''}${(day.events || []).map(e => `<span class="status ev">${esc(eventName(e.type))}${e.time ? ' ' + esc(e.time) : ''}</span>`).join('')}</div>
+        <div class="row">${p ? `<button class="linkbtn" data-act="goto" data-date="${d}">${esc(p.title)}</button>` : `<span class="muted small">fără plan</span>`}${p?.blocks?.length ? `<button class="btn sm" data-act="wo-open" data-date="${d}" aria-label="Deschide antrenamentul">▶</button>` : ''}${st}${day.party ? '<span class="status">party</span>' : ''}${(day.events || []).map(e => `<span class="status ev">${esc(eventName(e.type))}${e.time ? ' ' + esc(e.time) : ''}</span>`).join('')}</div>
         ${availHTML(d)}
       </div></div>`;
     }
@@ -1851,11 +1945,211 @@ function msgSheet() {
     ${S.messages.length ? S.messages.map(m => `<div class="card"><span class="eyebrow">${esc(fmtShort(m.date || ''))} · ${esc(m.kind || '')}</span><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></div>`).join('') : '<p class="empty">Niciun mesaj încă.</p>'}`;
 }
 
+/* ---------- workout mode: the session one exercise at a time, screen kept on, timers and spoken tempo ---------- */
+// Timed items use `timer` {sets, work, rest, perSide} from the plan (or a best-effort parse of `dose`);
+// rep items use `cadence` [[word, seconds], ...] in execution order, from the plan item or the catalog.
+let WO = null, PLAY = null, LOCK = null, AC = null;
+const WO_OPTS = store.get('dsp-wo', { voice: true, tick: true });
+const NUM = 'unu doi trei patru cinci șase șapte opt nouă zece unsprezece doisprezece treisprezece paisprezece cincisprezece șaisprezece șaptesprezece optsprezece nouăsprezece douăzeci'.split(' ');
+const SIDE_RE = /\/\s*(parte|picior|braț|brat)/i;
+async function lockScreen() {
+  try { if ('wakeLock' in navigator && !LOCK) { LOCK = await navigator.wakeLock.request('screen'); LOCK.addEventListener('release', () => { LOCK = null; }); } } catch (e) {}
+}
+function releaseLock() { try { LOCK?.release(); } catch (e) {} LOCK = null; }
+const roVoice = () => ('speechSynthesis' in window ? speechSynthesis.getVoices().find(v => /^ro/i.test(v.lang)) : null) || null;
+function say(text) {
+  if (!WO_OPTS.voice || !('speechSynthesis' in window)) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text); u.lang = 'ro-RO'; u.rate = 1.15;
+    const v = roVoice(); if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function beep(freq, dur = .1, vol = .5) {
+  try {
+    AC ||= new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
+    o.frequency.value = freq; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+    o.connect(g).connect(AC.destination); o.start(t); o.stop(t + dur);
+  } catch (e) {}
+}
+function itemTimer(it) {
+  if (it.timer?.work) return { sets: it.timer.sets || 1, work: it.timer.work, rest: it.timer.rest ?? 0, perSide: !!it.timer.perSide };
+  const d = it.dose || '';
+  let m = d.match(/(\d+)\s*[×x]\s*(\d+)(?:\s*[–-]\s*(\d+))?\s*s\b/);
+  if (m) { const work = +(m[3] || m[2]); return { sets: +m[1], work, rest: Math.max(5, Math.min(30, work)), perSide: SIDE_RE.test(d) }; }
+  m = d.match(/^(\d+(?:[.,]\d+)?)\s*min\b/);
+  if (m) return { sets: 1, work: Math.round(toNum(m[1]) * 60), rest: 0, perSide: false };
+  return null;
+}
+function itemReps(it) {
+  const top = s => { const n = String(s || '').match(/\d+/g); return n ? Math.max(...n.slice(0, 2).map(Number)) : null; };
+  if (it.sets) return { sets: it.sets, reps: top(it.reps), perSide: SIDE_RE.test(it.reps || '') };
+  const m = (it.dose || '').match(/^(\d+)\s*[×x]\s*(\d+)(?:\s*[–-]\s*(\d+))?/);
+  return m ? { sets: +m[1], reps: +(m[3] || m[2]), perSide: SIDE_RE.test(it.dose) } : null;
+}
+function itemCadence(it) {
+  const c = it.cadence || S.catalog[it.ex]?.cadence;
+  return Array.isArray(c) ? c.filter(p => Array.isArray(p) && typeof p[0] === 'string' && p[1] > 0) : [];
+}
+function woSteps(s) {
+  const out = [];
+  if (s.setup?.length || s.notes?.length) out.push({ kind: 'setup' });
+  (s.blocks || []).forEach(b => {
+    if (b.type === 'swap') out.push({ kind: 'swap', b });
+    else (b.items || []).forEach(it => out.push({ kind: 'item', b, it }));
+  });
+  out.push({ kind: 'end' });
+  return out;
+}
+function woOpen(d) {
+  const { session } = sessionFor(d);
+  if (!session?.blocks?.length) return;
+  WO = { d, s: session, steps: woSteps(session), i: 0, list: false };
+  $('#wo').hidden = false; document.body.style.overflow = 'hidden';
+  lockScreen(); woGo(0);
+}
+function woClose() {
+  stopPlay(); WO = null; releaseLock();
+  $('#wo').hidden = true; $('#wo').innerHTML = ''; document.body.style.overflow = '';
+}
+function woGo(i) {
+  stopPlay();
+  WO.i = Math.max(0, Math.min(WO.steps.length - 1, i)); WO.list = false;
+  const st = WO.steps[WO.i];
+  WO.cfg = null;
+  if (st.kind === 'item') {
+    const t = itemTimer(st.it), r = !t && itemReps(st.it), cad = r ? itemCadence(st.it) : [];
+    if (t) WO.cfg = { type: 'timer', t };
+    else if (r && cad.length) WO.cfg = { type: 'tempo', r, cad, setIdx: 0 };
+  }
+  woDraw();
+  $('.wo-body')?.scrollTo(0, 0);
+}
+function woDraw() {
+  const st = WO.steps[WO.i], n = WO.steps.length, s = WO.s, d = WO.d;
+  const items = WO.steps.filter(x => x.kind === 'item');
+  let body = '';
+  if (WO.list) {
+    body = `<div class="wo-list">${WO.steps.map((x, k) => `<button data-act="wo-go" data-i="${k}" class="${k === WO.i ? 'cur' : ''}"><span class="k">${k + 1}</span><span>${esc(x.kind === 'item' ? (x.it.name || S.catalog[x.it.ex]?.name || x.it.ex) : x.kind === 'swap' ? (x.b.title || 'Schimbul de discuri') : x.kind === 'setup' ? 'Pregătire' : 'Final')}</span></button>`).join('')}</div>`;
+  } else if (st.kind === 'setup') {
+    body = `<h2>Pregătire</h2>${d > today() ? '<p class="muted small">Previzualizare: antrenamentul îl bifezi în ziua lui.</p>' : ''}
+      ${s.coachNote ? `<p class="muted">${esc(s.coachNote)}</p>` : ''}
+      ${s.setup?.length ? `<section class="card setup"><span class="eyebrow">Asamblează înainte de start</span><ul>${s.setup.map(x => `<li>${esc(x)}</li>`).join('')}</ul></section>` : ''}
+      ${s.notes?.length ? `<section class="card info"><ul>${s.notes.map(x => `<li>${esc(x)}</li>`).join('')}</ul></section>` : ''}`;
+  } else if (st.kind === 'swap') {
+    body = `<section class="card swap"><h2>${esc(st.b.title || 'Schimbul de discuri')}</h2><ol>${(st.b.steps || []).map(x => `<li>${esc(x)}</li>`).join('')}</ol>${st.b.note ? `<p class="note">${esc(st.b.note)}</p>` : ''}</section>`;
+  } else if (st.kind === 'item') {
+    const it = st.it, name = it.name || S.catalog[it.ex]?.name || it.ex;
+    const rj = S.days[d]?.rejects?.[it.ex];
+    body = `<span class="eyebrow">${esc(st.b.title || '')} · exercițiul ${items.indexOf(st) + 1} din ${items.length}</span>
+      <button class="wo-name" data-act="ex" data-ex="${esc(it.ex)}">${esc(name)} <span class="muted small">ⓘ</span></button>
+      <div class="ex-meta">${itemPills(it).map(p => p.startsWith('<span') ? p : `<span class="pill">${p}</span>`).join('')}</div>
+      ${it.note ? `<p class="note">${esc(it.note)}</p>` : ''}${st.b.note ? `<p class="note">${esc(st.b.note)}</p>` : ''}
+      ${rj ? `<p class="rejected">Respins: ${esc(rejectLine(rj))}</p>` : ''}
+      ${WO.cfg ? `<section class="card clock" id="woClock"></section>` : ''}`;
+  } else {
+    body = `<h2>Gata!</h2><p>${canLog(d) ? 'Notează cum a mers: o atingere dacă a fost ca în plan, detalii doar pentru ce a fost altfel.' : d > today() ? 'Asta a fost previzualizarea. Îl bifezi în ziua lui.' : 'Antrenamentele se bifează doar azi sau ieri.'}</p>
+      <button class="btn primary" data-act="${canLog(d) ? 'wo-log' : 'wo-close'}">${canLog(d) ? 'Notează cum a mers' : 'Închide'}</button>`;
+  }
+  $('#wo').innerHTML = `<div class="wo-top"><button class="iconbtn" data-act="wo-close" aria-label="Închide antrenamentul">×</button>
+      <div class="t"><span>${esc(fmtDate(d))}</span><b>${esc(s.title || 'Antrenament')}</b></div>
+      <button class="iconbtn" data-act="wo-list" aria-label="Lista exercițiilor" aria-pressed="${WO.list}">☰</button></div>
+    <div class="wo-prog"><i style="width:${(100 * WO.i / Math.max(1, n - 1)).toFixed(1)}%"></i></div>
+    <div class="wo-body"><div class="wrap">${body}</div></div>
+    <div class="wo-nav"><button class="btn" data-act="wo-go" data-i="${WO.i - 1}" ${WO.i === 0 ? 'disabled' : ''}>‹ Înapoi</button><span class="n">${WO.i + 1} / ${n}</span>
+      <button class="btn primary" data-act="wo-go" data-i="${WO.i + 1}" ${WO.i === n - 1 ? 'disabled' : ''}>Următorul ›</button></div>`;
+  drawClock();
+}
+const mmss = s => s >= 60 ? `${Math.floor(s / 60)}:${pad(s % 60)}` : String(s);
+function drawClock() {
+  const el = $('#woClock'); if (!el || !WO?.cfg) return;
+  const c = WO.cfg, g = PLAY?.segs[PLAY.k], left = PLAY ? Math.max(0, Math.ceil(((PLAY.left ?? (PLAY.end - performance.now()))) / 1000)) : 0;
+  const opts = `<div class="row"><button class="chip" data-act="wo-opt" data-k="voice" aria-pressed="${!!WO_OPTS.voice}">Voce</button>${c.type === 'tempo' ? `<button class="chip" data-act="wo-opt" data-k="tick" aria-pressed="${!!WO_OPTS.tick}">Bip pe secundă</button>` : ''}</div>
+    ${WO_OPTS.voice && 'speechSynthesis' in window && speechSynthesis.getVoices().length && !roVoice() ? '<p class="note">Telefonul nu are o voce românească instalată; o adaugi din Setări › Text în vorbire (Google). Până atunci vorbește vocea implicită.</p>' : ''}`;
+  const running = PLAY ? `<button class="btn" data-act="wo-pause">${PLAY.left != null ? '▶ Continuă' : 'Pauză'}</button>${c.type === 'timer' ? '<button class="btn" data-act="wo-skip">Gata mai devreme</button>' : ''}<button class="btn ghost" data-act="wo-stop">Oprește</button>` : '';
+  if (c.type === 'timer') {
+    const t = c.t, sideTxt = g?.side ? (g.side === 1 ? ' · prima parte' : ' · a doua parte') : '';
+    el.innerHTML = PLAY
+      ? `<span class="ph ${g.kind === 'work' ? '' : 'rest'}">${esc(g.label)}</span><span class="big">${mmss(left)}</span><span class="sub">Seria ${g.set || 1} din ${t.sets}${t.perSide ? sideTxt : ''}</span><div class="row">${running}</div>${opts}`
+      : `<span class="ph">Cronometru</span><span class="big">${mmss(t.work)}</span><span class="sub">${t.sets} × ${t.work} s${t.perSide ? ' pe parte' : ''}${t.rest && t.sets > 1 ? ` · pauză ${t.rest} s` : ''}</span>
+        <div class="row"><button class="btn primary" data-act="wo-play">▶ Pornește</button></div>${opts}`;
+    return;
+  }
+  const r = c.r, sides = r.perSide ? 2 : 1, total = r.sets * sides;
+  const setTxt = k => `Seria ${Math.floor(k / sides) + 1} din ${r.sets}${r.perSide ? (k % 2 ? ' · a doua parte' : ' · prima parte') : ''}`;
+  const chips = `<div class="cad">${c.cad.map(([w, sec], j) => `<span class="${g?.kind === 'phase' && g.ph === j ? 'on' : ''}">${esc(w)} ${sec} s</span>`).join('')}</div>`;
+  if (PLAY) {
+    el.innerHTML = `${chips}<span class="ph ${g.kind === 'ready' ? 'rest' : ''}">${esc(g.label)}</span><span class="big">${g.kind === 'ready' ? left : g.rep}</span>
+      <span class="sub">${g.kind === 'ready' ? 'începe în' : `repetarea ${g.rep} din ${r.reps}`} · ${setTxt(c.setIdx)}</span><div class="row">${running}</div>${opts}`;
+  } else if (c.setIdx >= total) {
+    el.innerHTML = `${chips}<span class="ph">Toate seriile gata</span><div class="row"><button class="btn" data-act="wo-set" data-n="${-total}">De la capăt</button><button class="btn primary" data-act="wo-go" data-i="${WO.i + 1}">Următorul ›</button></div>${opts}`;
+  } else {
+    el.innerHTML = `${chips}<span class="ph">Tempo dictat</span><span class="big">${r.reps ?? '–'}</span><span class="sub">repetări · ${setTxt(c.setIdx)}</span>
+      <div class="row"><button class="btn sm ghost" data-act="wo-set" data-n="-1" ${c.setIdx === 0 ? 'disabled' : ''}>‹</button><button class="btn primary" data-act="wo-play">▶ Pornește seria</button><button class="btn sm ghost" data-act="wo-set" data-n="1">›</button></div>
+      <p class="note">Te opresc la ${r.reps} repetări; apasă Oprește dacă termini mai devreme.</p>${opts}`;
+  }
+}
+function play(segs, onDone) {
+  stopPlay();
+  PLAY = { segs, k: -1, end: performance.now(), left: null, sec: null, onDone };
+  nextSeg(PLAY.end);
+  if (PLAY) PLAY.iv = setInterval(tickPlay, 40);
+}
+function nextSeg(at) {
+  const P = PLAY; P.k++;
+  if (P.k >= P.segs.length) { clearInterval(P.iv); PLAY = null; P.onDone?.(); drawClock(); return; }
+  const g = P.segs[P.k];
+  P.end = at + g.sec * 1000; P.sec = g.sec;
+  beep(g.kind === 'rest' || g.kind === 'ready' ? 520 : 880, .12);
+  if (g.say) say(g.say);
+  drawClock();
+}
+function tickPlay() {
+  const P = PLAY; if (!P || P.left != null) return;
+  const now = performance.now();
+  while (PLAY === P && now >= P.end) nextSeg(P.end);
+  if (PLAY !== P) return;
+  const left = Math.ceil((P.end - now) / 1000);
+  if (left === P.sec) return;
+  P.sec = left;
+  const g = P.segs[P.k];
+  if (g.kind === 'phase') { if (WO_OPTS.tick) beep(440, .05, .3); }
+  else if (left <= 3) beep(660, .08);
+  drawClock();
+}
+function stopPlay() {
+  if (PLAY) clearInterval(PLAY.iv);
+  PLAY = null;
+  try { speechSynthesis.cancel(); } catch (e) {}
+}
+function startTimer() {
+  const t = WO.cfg.t, sides = t.perSide ? 2 : 1, segs = [{ kind: 'ready', sec: 3, label: 'Pregătește-te', say: 'Pregătește-te' }];
+  for (let s = 1; s <= t.sets; s++) for (let side = 1; side <= sides; side++) {
+    segs.push({ kind: 'work', sec: t.work, label: 'Lucru', set: s, side: t.perSide ? side : 0, say: side === 2 ? 'A doua parte' : s === 1 ? 'Start' : `Seria ${s}` });
+    if (side < sides) segs.push({ kind: 'rest', sec: 5, label: 'Schimbă partea', set: s, side, say: 'Schimbă partea' });
+    else if (s < t.sets && t.rest) segs.push({ kind: 'rest', sec: t.rest, label: 'Pauză', set: s, say: `Pauză, ${t.rest} secunde` });
+  }
+  play(segs, () => { say('Gata'); beep(990, .3); });
+}
+function startTempo() {
+  const c = WO.cfg, r = c.r, sides = r.perSide ? 2 : 1, total = r.sets * sides;
+  const k = c.setIdx, label = `Seria ${Math.floor(k / sides) + 1}${r.perSide ? (k % 2 ? ', a doua parte' : ', prima parte') : ''}`;
+  const segs = [{ kind: 'ready', sec: 3, label: 'Pregătește-te', say: label }];
+  for (let n = 1; n <= (r.reps || 10); n++) c.cad.forEach(([w, sec], j) => segs.push({ kind: 'phase', sec, label: w, ph: j, rep: n, say: j === 0 ? `${NUM[n - 1] || n}, ${w}` : w }));
+  play(segs, () => {
+    c.setIdx++; beep(990, .3);
+    say(c.setIdx >= total ? 'Gata exercițiul' : r.perSide && c.setIdx % 2 ? 'Schimbă partea' : 'Gata seria');
+  });
+}
+
 /* ---------- sheet ---------- */
 function openSheet() { $('#sheet').hidden = false; document.body.style.overflow = 'hidden'; }
 function closeSheet() { $('#sheet').hidden = true; document.body.style.overflow = ''; $('#sheetPanel').innerHTML = ''; }
 $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closeSheet(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) closeSheet(); });
+document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (!$('#sheet').hidden) closeSheet(); else if (WO) woClose(); });
 
 /* ---------- uploads ---------- */
 async function shrink(file, max = 1600) {
@@ -1901,6 +2195,27 @@ document.addEventListener('click', async e => {
     await sendAll();
   }
   else if (a === 'push-on') enablePush(b);
+  else if (a === 'msg-open') { msgOpen(b.dataset.id); if (S.tab === 'azi') render(); }
+  else if (a === 'wo-open') woOpen(b.dataset.date);
+  else if (a === 'wo-close') woClose();
+  else if (a === 'wo-log') { const d = WO.d; woClose(); S.date = d; S.tab = 'azi'; render(); $('#logCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  else if (a === 'wo-list') { WO.list = !WO.list; stopPlay(); woDraw(); }
+  else if (a === 'wo-go') woGo(+b.dataset.i);
+  else if (a === 'wo-play') { if (WO.cfg?.type === 'timer') startTimer(); else if (WO.cfg) startTempo(); }
+  else if (a === 'wo-pause' && PLAY) {
+    if (PLAY.left != null) { PLAY.end = performance.now() + PLAY.left; PLAY.left = null; }
+    else { PLAY.left = PLAY.end - performance.now(); try { speechSynthesis.cancel(); } catch (er) {} }
+    drawClock();
+  }
+  else if (a === 'wo-skip' && PLAY && PLAY.left == null) nextSeg(performance.now());
+  else if (a === 'wo-stop') {
+    // stopping a tempo set early still counts the set as done
+    const counted = WO.cfg?.type === 'tempo' && PLAY && PLAY.segs[PLAY.k]?.kind === 'phase';
+    stopPlay(); if (counted) WO.cfg.setIdx++;
+    drawClock();
+  }
+  else if (a === 'wo-set' && WO.cfg?.type === 'tempo') { const c = WO.cfg, total = c.r.sets * (c.r.perSide ? 2 : 1); stopPlay(); c.setIdx = Math.max(0, Math.min(total, c.setIdx + +b.dataset.n)); drawClock(); }
+  else if (a === 'wo-opt') { WO_OPTS[b.dataset.k] = !WO_OPTS[b.dataset.k]; store.set('dsp-wo', WO_OPTS); if (!WO_OPTS.voice) try { speechSynthesis.cancel(); } catch (er) {} drawClock(); }
   else if (a === 'older') { const first = S.profile?.startDate || addDays(today(), -365); await ensureRange(first, today()); render(); }
   else if (a === 'reject') rejectSheet(b.dataset.ex);
   else if (a === 'unreject') saveDay(S.date, { rejects: { [b.dataset.ex]: null } });
@@ -2038,7 +2353,14 @@ function init() {
   render();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   pull();
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && GH.token && !sending) pull(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (WO) lockScreen();
+    else if (GH.token && !sending) pull();
+  });
+  addEventListener('offline', renderChrome);
+  try { speechSynthesis.addEventListener('voiceschanged', () => { if (WO && !PLAY) drawClock(); }); } catch (e) {}
+  addEventListener('online', () => { if (GH.token && !sending) pull(); else renderChrome(); });
 }
 init();
 </script>
