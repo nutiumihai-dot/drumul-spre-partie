@@ -676,7 +676,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v22';
+const APP_VERSION = 'v23';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -840,7 +840,8 @@ async function pull() {
     S.syncMsg = errText(e);
     if (e.status !== 0) toast(S.syncMsg);
   }
-  render();
+  // the pull often lands while he is typing (it starts when the app opens): wait for the field to lose focus
+  renderChrome(); schedule();
 }
 
 /* ---------- coach without the PC: build a prompt for Claude on the phone, import its JSON answer ---------- */
@@ -1149,7 +1150,21 @@ function renderAltitude() {
 }
 
 /* ---------- views ---------- */
+// Replacing the view while a field has focus would remove that field mid-typing: the browser commits what was typed
+// so far (e.g. "8" of "89,1") and the rest lands in the new field. So a render keeps the focused field's text, focus
+// and cursor, and a render triggered from inside another render (by that commit) waits for the next one.
+let rendering = false;
 function render() {
+  if (rendering) { pending = true; return; }
+  const a = editing() ? document.activeElement : null;
+  const key = a && (a.id ? `#${a.id}` : a.dataset.path ? `[data-path="${a.dataset.path}"]${a.dataset.date ? `[data-date="${a.dataset.date}"]` : ':not([data-date])'}` : null);
+  const keep = key && { value: a.value, start: a.selectionStart, end: a.selectionEnd };
+  rendering = true;
+  try { renderView(); } finally { rendering = false; }
+  const n = key && $(key, $('#view'));
+  if (n) { n.value = keep.value; n.focus(); try { n.setSelectionRange(keep.start, keep.end); } catch (e) {} }
+}
+function renderView() {
   renderChrome();
   const v = $('#view');
   if (!GH.token) { v.innerHTML = `<section class="card"><h2>Conectează-te la GitHub</h2><p>Jurnalele se salvează în repo-ul tău privat. Lipește aici tokenul creat în GitHub; rămâne salvat doar pe acest dispozitiv.</p>${ghForm()}</section>`; return; }
