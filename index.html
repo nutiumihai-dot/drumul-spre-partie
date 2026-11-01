@@ -317,7 +317,7 @@ details.more[open] summary { margin-bottom: 8px; }
 .loop .wait { color: var(--warn); font-weight: 600; }
 .pill.pend { background: var(--surface-2); color: var(--muted); font-weight: 600; }
 
-/* workout mode: one exercise per screen, timers and spoken tempo */
+/* workout mode: one exercise per screen, timers for timed exercises */
 .wo { position: fixed; inset: 0; z-index: 15; background: var(--bg); display: flex; flex-direction: column; }
 .wo-top { background: var(--night); color: var(--night-fg); padding: calc(env(safe-area-inset-top, 0px) + 10px) max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); display: flex; align-items: center; gap: 10px; }
 .wo-top .iconbtn { color: var(--night-fg); background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .18); flex: none; }
@@ -337,9 +337,6 @@ details.more[open] summary { margin-bottom: 8px; }
 .clock .ph.rest { color: var(--c-out); }
 .clock .sub { font-size: 14px; font-weight: 600; color: var(--muted); }
 .clock .row { justify-content: center; }
-.cad { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-.cad span { font-size: 13px; font-weight: 700; border-radius: 8px; padding: 4px 10px; background: var(--surface-2); }
-.cad span.on { background: var(--accent); color: #fff; }
 .wo-list { display: flex; flex-direction: column; }
 .wo-list button { border: 0; border-top: 1px solid var(--line); background: none; text-align: left; padding: 10px 0; display: flex; gap: 10px; }
 .wo-list button.cur { color: var(--accent); font-weight: 700; }
@@ -656,7 +653,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v19';
+const APP_VERSION = 'v20';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -1945,22 +1942,16 @@ function msgSheet() {
     ${S.messages.length ? S.messages.map(m => `<div class="card"><span class="eyebrow">${esc(fmtShort(m.date || ''))} · ${esc(m.kind || '')}</span><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></div>`).join('') : '<p class="empty">Niciun mesaj încă.</p>'}`;
 }
 
-/* ---------- workout mode: the session one exercise at a time, screen kept on, timers and spoken tempo ---------- */
-// Timed items use `timer` {sets, work, rest, perSide} from the plan (or a best-effort parse of `dose`);
-// rep items use `cadence` [[word, seconds], ...] in execution order, from the plan item or the catalog.
+/* ---------- workout mode: the session one exercise at a time, screen kept on, timers for timed exercises ---------- */
+// Timed items use `timer` {sets, work, rest, perSide} from the plan (or a best-effort parse of `dose`); rep items get no timer.
 let WO = null, PLAY = null, LOCK = null, AC = null;
-const WO_OPTS = store.get('dsp-wo', { voice: true, tick: true });
-// Spoken cues are in English (the Romanian TTS voices sound bad); the screen stays in Romanian.
-// Cadence words come from the catalog in Romanian and are translated here; COACH.md limits them to this list.
-const SAY_EN = { 'coboară': 'down', 'urcă': 'up', 'ridică': 'lift', 'împinge': 'push', 'trage': 'pull', 'pauză': 'pause', 'ține': 'hold', 'întinde': 'extend',
-  'îndoaie': 'bend', 'desface': 'apart', 'revino': 'back', 'rotește': 'rotate', 'peste': 'over', 'înapoi': 'back', 'deschide': 'open', 'închide': 'close',
-  'atinge': 'tap', 'pas': 'step', 'apropie': 'together' };
-const sayWord = w => SAY_EN[w.toLowerCase()] || w;
+const WO_OPTS = store.get('dsp-wo', { voice: true });
 const SIDE_RE = /\/\s*(parte|picior|braț|brat)/i;
 async function lockScreen() {
   try { if ('wakeLock' in navigator && !LOCK) { LOCK = await navigator.wakeLock.request('screen'); LOCK.addEventListener('release', () => { LOCK = null; }); } } catch (e) {}
 }
 function releaseLock() { try { LOCK?.release(); } catch (e) {} LOCK = null; }
+// Spoken cues are in English: the Romanian TTS voices sound bad. The screen stays in Romanian.
 const enVoice = () => { if (!('speechSynthesis' in window)) return null; const vs = speechSynthesis.getVoices(); return vs.find(v => v.lang === 'en-US') || vs.find(v => /^en/i.test(v.lang)) || null; };
 function say(text) {
   if (!WO_OPTS.voice || !('speechSynthesis' in window)) return;
@@ -1989,16 +1980,6 @@ function itemTimer(it) {
   if (m) return { sets: 1, work: Math.round(toNum(m[1]) * 60), rest: 0, perSide: false };
   return null;
 }
-function itemReps(it) {
-  const top = s => { const n = String(s || '').match(/\d+/g); return n ? Math.max(...n.slice(0, 2).map(Number)) : null; };
-  if (it.sets) return { sets: it.sets, reps: top(it.reps), perSide: SIDE_RE.test(it.reps || '') };
-  const m = (it.dose || '').match(/^(\d+)\s*[×x]\s*(\d+)(?:\s*[–-]\s*(\d+))?/);
-  return m ? { sets: +m[1], reps: +(m[3] || m[2]), perSide: SIDE_RE.test(it.dose) } : null;
-}
-function itemCadence(it) {
-  const c = it.cadence || S.catalog[it.ex]?.cadence;
-  return Array.isArray(c) ? c.filter(p => Array.isArray(p) && typeof p[0] === 'string' && p[1] > 0) : [];
-}
 function woSteps(s) {
   const out = [];
   if (s.setup?.length || s.notes?.length) out.push({ kind: 'setup' });
@@ -2026,9 +2007,8 @@ function woGo(i) {
   const st = WO.steps[WO.i];
   WO.cfg = null;
   if (st.kind === 'item') {
-    const t = itemTimer(st.it), r = !t && itemReps(st.it), cad = r ? itemCadence(st.it) : [];
+    const t = itemTimer(st.it);
     if (t) WO.cfg = { type: 'timer', t };
-    else if (r && cad.length) WO.cfg = { type: 'tempo', r, cad, setIdx: 0 };
   }
   woDraw();
   $('.wo-body')?.scrollTo(0, 0);
@@ -2072,29 +2052,13 @@ const mmss = s => s >= 60 ? `${Math.floor(s / 60)}:${pad(s % 60)}` : String(s);
 function drawClock() {
   const el = $('#woClock'); if (!el || !WO?.cfg) return;
   const c = WO.cfg, g = PLAY?.segs[PLAY.k], left = PLAY ? Math.max(0, Math.ceil(((PLAY.left ?? (PLAY.end - performance.now()))) / 1000)) : 0;
-  const opts = `<div class="row"><button class="chip" data-act="wo-opt" data-k="voice" aria-pressed="${!!WO_OPTS.voice}">Voce (engleză)</button>${c.type === 'tempo' ? `<button class="chip" data-act="wo-opt" data-k="tick" aria-pressed="${!!WO_OPTS.tick}">Bip pe secundă</button>` : ''}</div>`;
-  const running = PLAY ? `<button class="btn" data-act="wo-pause">${PLAY.left != null ? '▶ Continuă' : 'Pauză'}</button>${c.type === 'timer' ? '<button class="btn" data-act="wo-skip">Gata mai devreme</button>' : ''}<button class="btn ghost" data-act="wo-stop">Oprește</button>` : '';
-  if (c.type === 'timer') {
-    const t = c.t, sideTxt = g?.side ? (g.side === 1 ? ' · prima parte' : ' · a doua parte') : '';
-    el.innerHTML = PLAY
-      ? `<span class="ph ${g.kind === 'work' ? '' : 'rest'}">${esc(g.label)}</span><span class="big">${mmss(left)}</span><span class="sub">Seria ${g.set || 1} din ${t.sets}${t.perSide ? sideTxt : ''}</span><div class="row">${running}</div>${opts}`
-      : `<span class="ph">Cronometru</span><span class="big">${mmss(t.work)}</span><span class="sub">${t.sets} × ${t.work} s${t.perSide ? ' pe parte' : ''}${t.rest && t.sets > 1 ? ` · pauză ${t.rest} s` : ''}</span>
-        <div class="row"><button class="btn primary" data-act="wo-play">▶ Pornește</button></div>${opts}`;
-    return;
-  }
-  const r = c.r, sides = r.perSide ? 2 : 1, total = r.sets * sides;
-  const setTxt = k => `Seria ${Math.floor(k / sides) + 1} din ${r.sets}${r.perSide ? (k % 2 ? ' · a doua parte' : ' · prima parte') : ''}`;
-  const chips = `<div class="cad">${c.cad.map(([w, sec], j) => `<span class="${g?.kind === 'phase' && g.ph === j ? 'on' : ''}">${esc(w)} ${sec} s</span>`).join('')}</div>`;
-  if (PLAY) {
-    el.innerHTML = `${chips}<span class="ph ${g.kind === 'ready' ? 'rest' : ''}">${esc(g.label)}</span><span class="big">${g.kind === 'ready' ? left : g.rep}</span>
-      <span class="sub">${g.kind === 'ready' ? 'începe în' : `repetarea ${g.rep} din ${r.reps}`} · ${setTxt(c.setIdx)}</span><div class="row">${running}</div>${opts}`;
-  } else if (c.setIdx >= total) {
-    el.innerHTML = `${chips}<span class="ph">Toate seriile gata</span><div class="row"><button class="btn" data-act="wo-set" data-n="${-total}">De la capăt</button><button class="btn primary" data-act="wo-go" data-i="${WO.i + 1}">Următorul ›</button></div>${opts}`;
-  } else {
-    el.innerHTML = `${chips}<span class="ph">Tempo dictat</span><span class="big">${r.reps ?? '–'}</span><span class="sub">repetări · ${setTxt(c.setIdx)}</span>
-      <div class="row"><button class="btn sm ghost" data-act="wo-set" data-n="-1" ${c.setIdx === 0 ? 'disabled' : ''}>‹</button><button class="btn primary" data-act="wo-play">▶ Pornește seria</button><button class="btn sm ghost" data-act="wo-set" data-n="1">›</button></div>
-      <p class="note">Te opresc la ${r.reps} repetări; apasă Oprește dacă termini mai devreme.</p>${opts}`;
-  }
+  const opts = `<div class="row"><button class="chip" data-act="wo-opt" data-k="voice" aria-pressed="${!!WO_OPTS.voice}">Voce (engleză)</button></div>`;
+  const running = PLAY ? `<button class="btn" data-act="wo-pause">${PLAY.left != null ? '▶ Continuă' : 'Pauză'}</button><button class="btn" data-act="wo-skip">Gata mai devreme</button><button class="btn ghost" data-act="wo-stop">Oprește</button>` : '';
+  const t = c.t, sideTxt = g?.side ? (g.side === 1 ? ' · prima parte' : ' · a doua parte') : '';
+  el.innerHTML = PLAY
+    ? `<span class="ph ${g.kind === 'work' ? '' : 'rest'}">${esc(g.label)}</span><span class="big">${mmss(left)}</span><span class="sub">Seria ${g.set || 1} din ${t.sets}${t.perSide ? sideTxt : ''}</span><div class="row">${running}</div>${opts}`
+    : `<span class="ph">Cronometru</span><span class="big">${mmss(t.work)}</span><span class="sub">${t.sets} × ${t.work} s${t.perSide ? ' pe parte' : ''}${t.rest && t.sets > 1 ? ` · pauză ${t.rest} s` : ''}</span>
+      <div class="row"><button class="btn primary" data-act="wo-play">▶ Pornește</button></div>${opts}`;
 }
 function play(segs, onDone) {
   stopPlay();
@@ -2120,8 +2084,7 @@ function tickPlay() {
   if (left === P.sec) return;
   P.sec = left;
   const g = P.segs[P.k];
-  if (g.kind === 'phase') { if (WO_OPTS.tick) beep(440, .05, .3); }
-  else if (left <= 3) beep(660, .08);
+  if (left <= 3) beep(660, .08);
   drawClock();
 }
 function stopPlay() {
@@ -2137,16 +2100,6 @@ function startTimer() {
     else if (s < t.sets && t.rest) segs.push({ kind: 'rest', sec: t.rest, label: 'Pauză', set: s, say: `Rest, ${t.rest} seconds` });
   }
   play(segs, () => { say('Done'); beep(990, .3); });
-}
-function startTempo() {
-  const c = WO.cfg, r = c.r, sides = r.perSide ? 2 : 1, total = r.sets * sides;
-  const k = c.setIdx;
-  const segs = [{ kind: 'ready', sec: 3, label: 'Pregătește-te', say: `Set ${Math.floor(k / sides) + 1}${r.perSide ? (k % 2 ? ', second side' : ', first side') : ''}` }];
-  for (let n = 1; n <= (r.reps || 10); n++) c.cad.forEach(([w, sec], j) => segs.push({ kind: 'phase', sec, label: w, ph: j, rep: n, say: j === 0 ? `${n}, ${sayWord(w)}` : sayWord(w) }));
-  play(segs, () => {
-    c.setIdx++; beep(990, .3);
-    say(c.setIdx >= total ? 'Exercise done' : r.perSide && c.setIdx % 2 ? 'Switch sides' : 'Set done');
-  });
 }
 
 /* ---------- sheet ---------- */
@@ -2205,20 +2158,14 @@ document.addEventListener('click', async e => {
   else if (a === 'wo-log') { const d = WO.d; woClose(); S.date = d; S.tab = 'azi'; render(); $('#logCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   else if (a === 'wo-list') { WO.list = !WO.list; stopPlay(); woDraw(); }
   else if (a === 'wo-go') woGo(+b.dataset.i);
-  else if (a === 'wo-play') { if (WO.cfg?.type === 'timer') startTimer(); else if (WO.cfg) startTempo(); }
+  else if (a === 'wo-play' && WO.cfg) startTimer();
   else if (a === 'wo-pause' && PLAY) {
     if (PLAY.left != null) { PLAY.end = performance.now() + PLAY.left; PLAY.left = null; }
     else { PLAY.left = PLAY.end - performance.now(); try { speechSynthesis.cancel(); } catch (er) {} }
     drawClock();
   }
   else if (a === 'wo-skip' && PLAY && PLAY.left == null) nextSeg(performance.now());
-  else if (a === 'wo-stop') {
-    // stopping a tempo set early still counts the set as done
-    const counted = WO.cfg?.type === 'tempo' && PLAY && PLAY.segs[PLAY.k]?.kind === 'phase';
-    stopPlay(); if (counted) WO.cfg.setIdx++;
-    drawClock();
-  }
-  else if (a === 'wo-set' && WO.cfg?.type === 'tempo') { const c = WO.cfg, total = c.r.sets * (c.r.perSide ? 2 : 1); stopPlay(); c.setIdx = Math.max(0, Math.min(total, c.setIdx + +b.dataset.n)); drawClock(); }
+  else if (a === 'wo-stop') { stopPlay(); drawClock(); }
   else if (a === 'wo-opt') { WO_OPTS[b.dataset.k] = !WO_OPTS[b.dataset.k]; store.set('dsp-wo', WO_OPTS); if (!WO_OPTS.voice) try { speechSynthesis.cancel(); } catch (er) {} drawClock(); }
   else if (a === 'older') { const first = S.profile?.startDate || addDays(today(), -365); await ensureRange(first, today()); render(); }
   else if (a === 'reject') rejectSheet(b.dataset.ex);
