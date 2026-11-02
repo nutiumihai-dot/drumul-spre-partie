@@ -239,12 +239,13 @@ textarea { min-height: 70px; resize: vertical; }
 .dish { display: flex; flex-direction: column; gap: 4px; }
 .dish + .dish { border-top: 1px dashed var(--line); padding-top: 6px; }
 .dish .thumbs img { width: 52px; height: 52px; }
-.totals { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .meter { display: flex; flex-direction: column; gap: 6px; }
-.meter .v { font-family: var(--font-display); font-size: 34px; font-style: italic; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+.meter .v { font-family: var(--font-display); font-size: 30px; font-style: italic; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
 .meter .bar { height: 10px; background: var(--surface-2); border-radius: 5px; overflow: hidden; }
 .meter .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 5px; }
 .meter.p .bar span { background: linear-gradient(90deg, var(--ice), #7DB4FF); }
+.meter.f .bar span { background: var(--ok); }
 
 /* progress */
 .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -681,7 +682,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v28';
+const APP_VERSION = 'v29';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -875,8 +876,8 @@ Acum: ${fmtDate(t)}, ora ${pad(now.getHours())}:${pad(now.getMinutes())}.
 Răspunde în română: întâi feedback-ul pentru Mihai, scurt (3–6 rânduri). Apoi, la final, UN SINGUR bloc \`\`\`json cu exact structura de mai jos; omite cheile de care nu ai nevoie.
 {
  "messages": [{"id": "${t}-manual", "date": "${t}", "kind": "feedback", "topic": "antrenament|general", "title": "max 6 cuvinte", "body": "2–4 rânduri"}],
- "meals_est": {"AAAA-LL-ZZ": {"<id masă existent>": {"kcal": 0, "protein": 0, "items": [{"kcal": 0, "protein": 0, "src": "cantitate|meniu|poza|tipic", "found": "opțional: ce ai citit din captura de meniu"}], "note": "opțional"}}},
- "coach": {"AAAA-LL-ZZ": {"kcal": 0, "protein": 0, "foodNote": "1–2 propoziții"}},
+ "meals_est": {"AAAA-LL-ZZ": {"<id masă existent>": {"kcal": 0, "protein": 0, "fiber": 0, "items": [{"kcal": 0, "protein": 0, "fiber": 0, "src": "cantitate|meniu|poza|tipic", "found": "opțional: ce ai citit din captura de meniu"}], "note": "opțional"}}},
+ "coach": {"AAAA-LL-ZZ": {"kcal": 0, "protein": 0, "fiber": 0, "foodNote": "1–2 propoziții"}},
  "plans": {"AAAA-LL-ZZ": {"sesiune completă, în același format ca planurile de mai jos": "..."}},
  "index": {"doar câmpurile din index.json pe care le schimbi, inclusiv altitude": "..."},
  "journal": "- 1–3 rânduri cu ce ai observat și decis",
@@ -945,8 +946,8 @@ function parseCoachAnswer(text) {
       if (!meals.some(m => m.id === id)) throw new Error(`Masa ${id} din ${d} nu există în jurnal.`);
       if (!isObj(e) || !isNum(e.kcal) || !isNum(e.protein)) throw new Error('O estimare de masă nu are kcal și protein numerice.');
       const items = Array.isArray(e.items) ? e.items.map(x => isObj(x) && isNum(x.kcal) && isNum(x.protein)
-        ? { kcal: Math.round(x.kcal), protein: Math.round(x.protein), ...(EST_SRC[x.src] ? { src: x.src } : {}), ...(typeof x.found === 'string' && x.found ? { found: x.found.slice(0, 300) } : {}) } : {}) : null;
-      est[id] = { kcal: Math.round(e.kcal), protein: Math.round(e.protein), ...(items ? { items } : {}), ...(typeof e.note === 'string' && e.note ? { note: e.note.slice(0, 400) } : {}) };
+        ? { kcal: Math.round(x.kcal), protein: Math.round(x.protein), ...(isNum(x.fiber) ? { fiber: Math.round(x.fiber) } : {}), ...(EST_SRC[x.src] ? { src: x.src } : {}), ...(typeof x.found === 'string' && x.found ? { found: x.found.slice(0, 300) } : {}) } : {}) : null;
+      est[id] = { kcal: Math.round(e.kcal), protein: Math.round(e.protein), ...(isNum(e.fiber) ? { fiber: Math.round(e.fiber) } : {}), ...(items ? { items } : {}), ...(typeof e.note === 'string' && e.note ? { note: e.note.slice(0, 400) } : {}) };
       const m = meals.find(x => x.id === id);
       preview.push([`${fmtShort(d)} · ${MEALT.find(x => x[0] === m.type)?.[1] || 'masă'}`, `~${est[id].kcal} kcal, ${est[id].protein} g proteine`]);
     });
@@ -954,7 +955,7 @@ function parseCoachAnswer(text) {
   });
   Object.entries(j.coach || {}).forEach(([d, c]) => {
     if (!isDate(d) || !isObj(c) || !isNum(c.kcal) || !isNum(c.protein)) throw new Error('coach are o dată sau valori greșite.');
-    ops.push({ file: `days/${d.slice(0, 7)}.json`, key: d, patch: { coach: { kcal: Math.round(c.kcal), protein: Math.round(c.protein), foodNote: String(c.foodNote || '').slice(0, 600) } } });
+    ops.push({ file: `days/${d.slice(0, 7)}.json`, key: d, patch: { coach: { kcal: Math.round(c.kcal), protein: Math.round(c.protein), ...(isNum(c.fiber) ? { fiber: Math.round(c.fiber) } : {}), foodNote: String(c.foodNote || '').slice(0, 600) } } });
     preview.push([`${fmtShort(d)} · total`, `~${Math.round(c.kcal)} kcal, ${Math.round(c.protein)} g proteine`]);
   });
   Object.entries(j.plans || {}).forEach(([d, p]) => {
@@ -1077,6 +1078,11 @@ function dayProtein(day) {
   if (day?.coach?.protein != null) return day.coach.protein;
   const ms = (day?.meals || []).filter(m => m.est?.protein != null);
   return ms.length ? ms.reduce((a, m) => a + m.est.protein, 0) : null;
+}
+function dayFiber(day) {
+  if (day?.coach?.fiber != null) return day.coach.fiber;
+  const ms = (day?.meals || []).filter(m => m.est?.fiber != null);
+  return ms.length ? ms.reduce((a, m) => a + m.est.fiber, 0) : null;
 }
 function maxPain(day) {
   const l = day?.log; if (!l) return null;
@@ -1660,13 +1666,14 @@ function photosHTML(ids, target) {
 /* ---------- food ---------- */
 function viewFood() {
   const d = S.date, day = S.days[d] || {}, tg = S.profile?.targets || {};
-  const kcal = dayKcal(day), prot = dayProtein(day), kt = kcalTarget(d);
-  const kHi = kt.hi, pLo = tg.protein?.[0] || 150;
+  const kcal = dayKcal(day), prot = dayProtein(day), fib = dayFiber(day), kt = kcalTarget(d);
+  const kHi = kt.hi, pLo = tg.protein?.[0] || 150, fLo = tg.fiber?.[0] || 30;
   const meals = [...(day.meals || [])].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-  let h = `<div class="v v-mancare"><div class="col-a"><section class="card"><div class="row between"><h2>Total zi</h2><span class="muted small">ținta ${fmtN(kt.lo, 0)}–${fmtN(kHi, 0)} kcal (zi de ${kt.kind}) · ${fmtN(pLo, 0)}+ g proteine</span></div>
+  let h = `<div class="v v-mancare"><div class="col-a"><section class="card"><div class="row between"><h2>Total zi</h2><span class="muted small">ținta ${fmtN(kt.lo, 0)}–${fmtN(kHi, 0)} kcal (zi de ${kt.kind}) · ${fmtN(pLo, 0)}+ g proteine · ${fmtN(fLo, 0)}+ g fibre</span></div>
     <div class="totals">
       <div class="meter"><span class="eyebrow">Calorii</span><span class="v">${kcal == null ? '–' : fmtN(kcal, 0)}</span><div class="bar"><span style="width:${Math.min(100, (kcal || 0) / kHi * 100)}%"></span></div></div>
       <div class="meter p"><span class="eyebrow">Proteine (g)</span><span class="v">${prot == null ? '–' : fmtN(prot, 0)}</span><div class="bar"><span style="width:${Math.min(100, (prot || 0) / pLo * 100)}%"></span></div></div>
+      <div class="meter f"><span class="eyebrow">Fibre (g)</span><span class="v">${fib == null ? '–' : fmtN(fib, 0)}</span><div class="bar"><span style="width:${Math.min(100, (fib || 0) / fLo * 100)}%"></span></div></div>
     </div>
     ${kcal == null && meals.length ? `<p class="muted small">Estimarea apare la următoarea verificare a antrenorului.</p>` : ''}
     <details class="more"><summary>Cum se calculează ținta de azi</summary><ul>${kcalWhy(kt).map(x => `<li>${esc(x)}</li>`).join('')}</ul><p class="muted">Se recalculează zilnic după greutatea medie pe 7 zile. Un antrenament din plan care nu s-a făcut trece retroactiv la zi de odihnă, iar ce ai mâncat pentru el se scade în următoarele ${kt.e.carryDays} zile (max ${kt.e.carryMax} kcal/zi).</p></details>
@@ -1685,7 +1692,7 @@ function viewFood() {
         ${(m.items || []).map((i, k) => dishHTML(i, m.est?.items?.[k])).join('')}
         ${m.notes ? `<p class="note">${esc(m.notes)}</p>` : ''}
         ${m.photos?.length ? `<div class="thumbs">${m.photos.map(thumb).join('')}</div>` : ''}
-        ${m.est ? `<div class="ex-meta"><span class="pill load">~${fmtN(m.est.kcal, 0)} kcal</span><span class="pill">~${fmtN(m.est.protein, 0)} g proteine</span></div>`
+        ${m.est ? `<div class="ex-meta"><span class="pill load">~${fmtN(m.est.kcal, 0)} kcal</span><span class="pill">~${fmtN(m.est.protein, 0)} g proteine</span>${m.est.fiber != null ? `<span class="pill">~${fmtN(m.est.fiber, 0)} g fibre</span>` : ''}</div>`
           : `<div class="ex-meta"><span class="pill pend">${QUEUE.some(o => o.key === S.date && o.file.startsWith('days/')) ? 'netrimisă încă' : 'estimare în așteptare'}</span></div>`}
         ${m.est?.note ? `<p class="note">${esc(m.est.note)}</p>` : ''}
         <div class="row">${S.confirm === m.id
@@ -1699,7 +1706,7 @@ function viewFood() {
 }
 
 // Each dish carries its own photos: `farfurie` (the plate, for the portion) or `meniu` (menu / Glovo screenshot with grams
-// and ingredients). One photo may belong to several dishes. The coach answers per dish in est.items[k] = {kcal, protein, src, found?}.
+// and ingredients). One photo may belong to several dishes. The coach answers per dish in est.items[k] = {kcal, protein, fiber?, src, found?}.
 const PHK = { farfurie: 'farfurie', meniu: 'meniu' };
 const EST_SRC = { cantitate: 'din cantitate', meniu: 'din meniu', poza: 'din poză', tipic: 'porție obișnuită' };
 const phPath = ph => typeof ph === 'string' ? ph : ph?.path;
@@ -1708,7 +1715,7 @@ function dishHTML(i, e) {
     ${i.ingredients ? `<span class="muted small">Conține: ${esc(i.ingredients)}</span>` : ''}
     ${e?.found ? `<span class="muted small">Din meniu: ${esc(e.found)}</span>` : ''}
     ${i.photos?.length ? `<div class="thumbs">${i.photos.map(ph => thumb(phPath(ph))).join('')}</div>` : ''}
-    ${e && e.kcal != null ? `<span class="small"><b>~${fmtN(e.kcal, 0)} kcal</b> · ~${fmtN(e.protein, 0)} g proteine${EST_SRC[e.src] ? ` · <span class="muted">${EST_SRC[e.src]}</span>` : ''}</span>` : ''}</div>`;
+    ${e && e.kcal != null ? `<span class="small"><b>~${fmtN(e.kcal, 0)} kcal</b> · ~${fmtN(e.protein, 0)} g proteine${e.fiber ? ` · ~${fmtN(e.fiber, 0)} g fibre` : ''}${EST_SRC[e.src] ? ` · <span class="muted">${EST_SRC[e.src]}</span>` : ''}</span>` : ''}</div>`;
 }
 function mealSheet(meal, isNew) {
   const m = JSON.parse(JSON.stringify(meal));
@@ -2085,6 +2092,7 @@ function viewProfile() {
     <dt>Start</dt><dd>${fmtN(p.startWeight)} kg · ${p.heightCm} cm · ${p.age} ani · ${p.startDate ? fmtShort(p.startDate) : ''}</dd>
     <dt>Calorii</dt><dd>calculate zilnic: azi ~${fmtN(kcalTarget(t).kcal, 0)} kcal (zi de ${kcalTarget(t).kind}) · deficit ${fmtN(energy().deficit, 0)}${energy().adjust ? ` · corecție ${energy().adjust > 0 ? '+' : '−'}${fmtN(Math.abs(energy().adjust), 0)}` : ''}${energy().note ? `<br><span class="muted small">${esc(energy().note)}</span>` : ''}</dd>
     <dt>Proteine</dt><dd>${fmtN(tg.protein?.[0], 0)}–${fmtN(tg.protein?.[1], 0)} g/zi</dd>
+    <dt>Fibre</dt><dd>${fmtN(tg.fiber?.[0] || 30, 0)}–${fmtN(tg.fiber?.[1] || 40, 0)} g/zi</dd>
     <dt>Apă</dt><dd>${esc(tg.water || '')}</dd>
     <dt>Pași</dt><dd>${tg.steps ? fmtN(tg.steps, 0) + '/zi' : esc(tg.stepsNote || 'în măsurare')}</dd>
     <dt>Ritm</dt><dd>${esc(tg.pace || '')}</dd>
