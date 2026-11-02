@@ -200,6 +200,7 @@ textarea { min-height: 70px; resize: vertical; }
 .session-head .code { position: absolute; right: -6px; bottom: -28px; font-family: var(--font-display); font-weight: 700; font-style: italic; font-size: 130px; line-height: 1; opacity: .18; pointer-events: none; }
 .session-head h2 { font-size: 28px; font-style: italic; }
 .session-head .pill { background: rgba(255, 255, 255, .22); color: #fff; }
+.session-head .btn { color: var(--sess, var(--accent)); border-color: transparent; }
 .setup { border: 2px solid var(--ice); background: var(--ice-soft); box-shadow: none; }
 .setup .eyebrow { color: var(--ice); }
 .setup ul, .swap ol, .info ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
@@ -679,7 +680,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v26';
+const APP_VERSION = 'v27';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
