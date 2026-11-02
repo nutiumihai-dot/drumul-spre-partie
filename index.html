@@ -677,7 +677,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v24';
+const APP_VERSION = 'v25';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -1053,10 +1053,10 @@ function q(label, path, val, opts) {
   const hint = opts?.hint ? `<span class="muted small">${esc(opts.hint)}</span>` : '';
   return `<div class="sec"><div class="qlabel"><span>${esc(label)}</span>${hint}</div>${scale(path, val, opts)}</div>`;
 }
-function rolling(dates, getter, win = 7) {
+function rolling(dates, getter, win = 7, min = 1) {
   return dates.map(d => {
     const vals = []; for (let i = 0; i < win; i++) { const v = getter(addDays(d, -i)); if (v != null) vals.push(v); }
-    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    return vals.length >= min ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   });
 }
 function dayKcal(day) {
@@ -1876,10 +1876,13 @@ function svgChart(o) {
   let lo = o.yMin ?? Math.min(...vals), hi = o.yMax ?? Math.max(...vals);
   if (lo === hi) { lo -= 1; hi += 1; }
   const pv = (hi - lo) * 0.08; if (o.yMin == null) lo -= pv; if (o.yMax == null) hi += pv;
+  // round axis to a 1/2/5 step so grid lines land on readable values
+  const raw = (hi - lo) / 4, mag = 10 ** Math.floor(Math.log10(raw)), tick = [1, 2, 5, 10].map(m => m * mag).find(s => s >= raw);
+  if (o.yMin == null) lo = Math.floor(lo / tick) * tick; if (o.yMax == null) hi = Math.ceil(hi / tick) * tick;
   const xc = i => L + (i + 0.5) * (W - L - R) / n;
   const y = v => T + (hi - v) * (H - T - B) / (hi - lo);
   let g = '';
-  for (let k = 0; k <= 4; k++) { const v = lo + (hi - lo) * k / 4; g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fmtN(v, o.dec ?? 0)}</text>`; }
+  for (let k = 0, nt = Math.round((hi - lo) / tick); k <= nt; k++) { const v = lo + tick * k; g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fmtN(v, o.dec ?? 0)}</text>`; }
   if (o.band) g += `<rect class="band" x="${L}" width="${W - L - R}" y="${y(o.band[1])}" height="${Math.max(1, y(o.band[0]) - y(o.band[1]))}"/>`;
   const step = Math.max(1, Math.ceil(n / 6));
   for (let i = 0; i < n; i += step) g += `<text x="${xc(i)}" y="${H - 8}" text-anchor="middle">${fmtShort(o.dates[i])}</text>`;
@@ -1895,11 +1898,11 @@ function viewProgress() {
   const t = today();
   const all = Object.keys(S.days).sort();
   const first = all[0] || t;
-  const span = S.range === 0 ? Math.max(7, daysBetween(first, t) + 1) : S.range;
+  const span = Math.max(7, Math.min(S.range || Infinity, daysBetween(first, t) + 1));
   const dates = []; for (let i = span - 1; i >= 0; i--) dates.push(addDays(t, -i));
   const D = d => S.days[d] || {};
   const w = dates.map(d => D(d).weight ?? null);
-  const wAvg = rolling(dates, d => D(d).weight ?? null);
+  const wAvg = rolling(dates, d => D(d).weight ?? null, 7, 3);
   const steps = dates.map(d => D(d).steps ?? null);
   const kcal = dates.map(d => dayKcal(D(d)));
   const pain = dates.map(d => maxPain(D(d)));
