@@ -336,6 +336,7 @@ details.more[open] summary { margin-bottom: 8px; }
 
 /* coach inbox and loop status */
 .inbox-row { display: flex; flex-direction: column; gap: 2px; text-align: left; border: 0; border-left: 4px solid var(--accent); background: var(--surface-2); border-radius: 4px 12px 12px 4px; padding: 8px 12px; width: 100%; }
+a.inbox-row { color: inherit; text-decoration: none; margin-top: 6px; }
 .inbox-row span { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .loop { font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
 .loop b { color: var(--fg); }
@@ -682,7 +683,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v29';
+const APP_VERSION = 'v30';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -841,6 +842,8 @@ async function pull() {
     S.profile = prof; S.catalog = cat || {}; S.favMap = fav || {}; S.index = idx || {};
     QUEUE.forEach(applyLocal); derive(); cacheSave();
     S.ready.days = true; S.sync = QUEUE.length ? 'pending' : 'ok';
+    loadJson('config/push.json').then(syncPush, () => {});
+    loadOferte();
   } catch (e) {
     S.sync = e.status === 0 ? 'offline' : (e.status === 401 || e.status === 403 || e.status === 404) ? 'auth' : 'error';
     S.syncMsg = errText(e);
@@ -1275,6 +1278,7 @@ function viewAzi() {
 
   h += todayHero(d, day);
   if (d === t) {
+    h += oferteHTML();
     h += inboxHTML();
     h += yesterdayHTML(d);
   }
@@ -1870,6 +1874,17 @@ const unreadMsgs = () => { const s = Date.parse(seenAt()) || 0, r = readIds(); r
 const unreadCount = () => unreadMsgs().length;
 function markRead(id) { store.set('dsp-read', [...readIds().filter(x => S.messages.some(m => m.id === x)), id]); }
 const msgLabel = m => m.kind === 'zilnic' ? 'Concluzia zilei' : m.kind === 'săptămânal' ? 'Rezumat' : m.kind === 'raspuns' ? 'Răspuns' : m.topic === 'antrenament' ? 'Antrenament' : '';
+// Temporary (Black Friday 2026): the PC watches mi.com/ro and publishes oferte.json on the data repo's "oferte" branch.
+let OFERTE = store.get('dsp-oferte', null);
+async function loadOferte() {
+  try { const raw = await readAt('oferte.json', 'oferte'); OFERTE = raw ? JSON.parse(raw) : null; store.set('dsp-oferte', OFERTE); schedule(); } catch (e) {}
+}
+function oferteHTML() {
+  const o = OFERTE;
+  if (!o?.items?.length || !(o.until >= today())) return '';
+  const rows = o.items.map(p => `<a class="inbox-row" href="${esc(p.url)}" target="_blank" rel="noopener"><strong>${p.new ? 'Nou · ' : ''}${esc(p.name)}</strong><span>${fmtN(p.price, 2)} lei${p.off ? ` · −${p.off}%, era ${fmtN(p.list, 2)}` : ''}${p.out ? ' · stoc epuizat' : ''} · ${esc(p.kind)}</span></a>`).join('');
+  return `<section class="card"><div class="row between"><span class="eyebrow">Oferte Xiaomi · până pe ${fmtShort(o.until)}</span><span class="muted small">${esc(o.updated || '')}</span></div>${rows}</section>`;
+}
 function inboxHTML() {
   const un = unreadMsgs();
   const rows = un.slice(0, 5).map(m => `<button class="inbox-row" data-act="msg-open" data-id="${esc(m.id)}"><strong>${msgLabel(m) ? esc(msgLabel(m)) + ' · ' : ''}${esc(m.title || '')}</strong><span>${esc((m.body || '').split('\n')[0])}</span></button>`).join('');
@@ -1934,6 +1949,17 @@ function viewMessages() {
 const VAPID_PUBLIC = 'BHnS7sEmWIRT9J_coOPF53sBi5uDjp-q4158fg5wX9kFWPrv-_RYE-K11vL7kErsHIBcZ_gaBACV6g5PrpDm8AE';
 function b64urlToBytes(s) { const p = '='.repeat((4 - s.length % 4) % 4); const b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); }
 function deviceId() { try { let id = localStorage.getItem('dsp-device'); if (!id) { id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); localStorage.setItem('dsp-device', id); } return id; } catch (e) { return 'd-unknown'; } }
+const newPushSub = reg => reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64urlToBytes(VAPID_PUBLIC) });
+// Committed on its own, not through the queue, so turning notifications on never sends his unsent notes along.
+async function savePushSub(sub) {
+  const path = 'config/push.json';
+  await commitTo(GH.branch, async () => {
+    const data = JSON.parse(await readAt(path, GH.branch) || '{}');
+    data[deviceId()] = sub.toJSON();
+    FILES[path] = { sha: null, data };
+    return { entries: [{ path, mode: '100644', type: 'blob', content: JSON.stringify(data, null, 1) + '\n' }] };
+  }, 'Jurnal: notificări');
+}
 async function enablePush(btn) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) { toast('Browserul ăsta nu suportă notificări push.'); return; }
   btn.disabled = true;
@@ -1941,14 +1967,25 @@ async function enablePush(btn) {
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') { toast('Fără permisiune, nu pot trimite notificări. O poți da din setările aplicației.'); btn.disabled = false; return; }
     const reg = await navigator.serviceWorker.ready;
-    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64urlToBytes(VAPID_PUBLIC) });
-    queueOp({ file: 'config/push.json', key: deviceId(), replace: true, patch: sub.toJSON() });
-    await sendAll();
+    // always a fresh subscription: the old one may look fine here while the push service has already dropped it
+    const old = await reg.pushManager.getSubscription();
+    if (old) await old.unsubscribe().catch(() => {});
+    await savePushSub(await newPushSub(reg));
     try { localStorage.setItem('dsp-push', '1'); } catch (e) {}
     toast('Notificările sunt activate pe acest dispozitiv.'); render();
   } catch (e) { toast('Nu am putut activa notificările.'); btn.disabled = false; }
 }
 const pushOn = () => { try { return localStorage.getItem('dsp-push') === '1' && Notification.permission === 'granted'; } catch (e) { return false; } };
+// The browser can replace or drop the subscription (app reinstalled, site data cleared); on every pull, make sure
+// the data repo holds the one this device has now, so the coach's notifications keep arriving.
+async function syncPush() {
+  if (!pushOn() || !('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await newPushSub(reg);
+    if (FILES['config/push.json']?.data?.[deviceId()]?.endpoint !== sub.endpoint) await savePushSub(sub);
+  } catch (e) {}
+}
 
 /* ---------- progress ---------- */
 // The SVG is drawn at the width it is shown at, so 12px of text is 12px on screen (on a phone the old fixed 640 was halved)
@@ -2109,7 +2146,7 @@ function viewProfile() {
   if (p.equipment) h += `<section class="card"><h2>Echipament acasă</h2><ul>${(p.equipment.home || []).map(e => `<li>${esc(e)}</li>`).join('')}</ul>${p.equipment.plates ? `<p class="small"><strong>Discuri:</strong> ${esc(p.equipment.plates)}</p>` : ''}${p.equipment.notes ? `<p class="small muted">${esc(p.equipment.notes)}</p>` : ''}</section>`;
   h += `<section class="card"><h2>Sală</h2><p class="muted">${esc(p.gym || 'Nicio sală aleasă încă. Când te hotărăști, spune-i lui Claude ce aparate are.')}</p></section>`;
   h += `<section class="card"><h2>Notificări</h2><p class="muted small">Primești o notificare pe telefon când îți scriu un mesaj. Activează-le doar pe dispozitivul pe care vrei să le primești.</p>
-    ${pushOn() ? '<p class="done-status">Activate pe acest dispozitiv</p>' : '<button class="btn" data-act="push-on">Activează notificările aici</button>'}</section>`;
+    ${pushOn() ? '<p class="done-status">Activate pe acest dispozitiv</p><p class="muted small">Nu primești nimic? Reactivează-le: fac o abonare nouă.</p><button class="btn" data-act="push-on">Reactivează notificările</button>' : '<button class="btn" data-act="push-on">Activează notificările aici</button>'}</section>`;
   h += `<section class="card"><h2>Aplicația</h2><p class="muted small">Versiunea aplicației: <strong>${APP_VERSION}</strong>. Datele vin din repo-ul privat ${esc(GH.owner)}/${esc(GH.repo)}. ${QUEUE.length ? `${QUEUE.length} salvări așteaptă să fie trimise.` : 'Toate salvările sunt în GitHub.'}</p>
     <div class="row"><button class="btn primary" data-act="update-app">Actualizează aplicația și datele</button><button class="btn" data-act="manual">Antrenor fără PC</button></div>
     <details><summary class="small muted">Conexiunea GitHub</summary><div class="sec" style="margin-top:10px">${ghForm()}</div></details></section>`;
