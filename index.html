@@ -600,7 +600,7 @@ const LABELS = {
   kind: 'Disponibilitate', availNote: 'Detalii disponibilitate', weight: 'Greutate dimineața', steps: 'Pași', sleepHours: 'Somn azi-noapte (ore)', wake: 'Trezire (1–5)', party: 'Party seara',
   'log.completed': 'Antrenament', 'log.skipReason': 'Motiv', 'log.rpe': 'Efort (RPE)', 'log.painDuring': 'Durere în timpul antrenamentului',
   'log.painEvening': 'Durere seara', 'log.painMorning': 'Durere a doua zi dimineață', 'log.stiffness': 'Rigiditate', 'log.energy': 'Energie',
-  doms: 'Febră musculară (0–10)', 'classInfo.name': 'Clasă', 'classInfo.time': 'Ora clasei', 'classLog.what': 'Clasa: ce ați făcut', 'classLog.minutes': 'Clasa: durată (min)', 'classLog.rpe': 'Clasa: RPE', 'classLog.knee': 'Clasa: genunchi', 'classLog.notes': 'Clasa: cum a fost', 'outdoor.rpe': 'Ieșire: RPE',
+  doms: 'Febră musculară (0–10)', domsLegs: 'Febră: picioare', domsUpper: 'Febră: brațe și trunchi', 'classInfo.name': 'Clasă', 'classInfo.time': 'Ora clasei', 'classLog.what': 'Clasa: ce ați făcut', 'classLog.minutes': 'Clasa: durată (min)', 'classLog.rpe': 'Clasa: RPE', 'classLog.knee': 'Clasa: genunchi', 'classLog.notes': 'Clasa: cum a fost', 'outdoor.rpe': 'Ieșire: RPE',
   'log.swelling': 'Umflare', 'log.feel': 'Cum s-a simțit (1–5)', 'log.feelNote': 'Cum a fost', 'log.kneeling': 'Disconfort la sprijin', 'log.notes': 'Notițe antrenament',
   'outdoor.type': 'Ieșire: tip', 'outdoor.minutes': 'Ieșire: durată (min)', 'outdoor.km': 'Ieșire: distanță (km)', 'outdoor.up': 'Ieșire: urcare (m)',
   'outdoor.down': 'Ieșire: coborâre (m)', 'outdoor.kneeDown': 'Ieșire: genunchi la coborâre', 'outdoor.notes': 'Ieșire: notițe', 'outdoor.photos': 'Ieșire: poze',
@@ -683,7 +683,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v30';
+const APP_VERSION = 'v31';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -1292,7 +1292,8 @@ function viewAzi() {
       <label class="f">Pași ieri, ${esc(fmtShort(yd))} (total)<input type="text" inputmode="numeric" data-path="steps" data-date="${yd}" data-type="num" value="${S.days[yd]?.steps ?? ''}" placeholder="din Google Fit"></label>
     </div>
     ${q('Cât de greu te-ai trezit azi', 'wake', day.wake ?? null, { min: 1, max: 5, hint: '1 = ușor · 5 = foarte greu' })}
-    ${q('Febră musculară azi (cât de „rupt” ești)', 'doms', day.doms ?? null, { hint: '0 = deloc · 10 = abia mă mișc' })}
+    ${q('Febră musculară azi: picioare', 'domsLegs', day.domsLegs ?? null, { hint: 'coapse, fesieri, gambe · 0 = deloc · 10 = abia mă mișc' })}
+    ${q('Febră musculară azi: brațe și trunchi', 'domsUpper', day.domsUpper ?? null, { hint: 'piept, spate, umeri, brațe, abdomen · 0 = deloc · 10 = abia mă mișc' })}
   </section>
   <section class="card"><h2>Ziua</h2>
     <div class="sec"><span class="qlabel">Disponibilitate</span>${availHTML(d) || `<span class="muted small">${esc(availLabel(day))}</span>`}</div>
