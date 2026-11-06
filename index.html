@@ -683,7 +683,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v31';
+const APP_VERSION = 'v32';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -843,7 +843,6 @@ async function pull() {
     QUEUE.forEach(applyLocal); derive(); cacheSave();
     S.ready.days = true; S.sync = QUEUE.length ? 'pending' : 'ok';
     loadJson('config/push.json').then(syncPush, () => {});
-    loadOferte();
   } catch (e) {
     S.sync = e.status === 0 ? 'offline' : (e.status === 401 || e.status === 403 || e.status === 404) ? 'auth' : 'error';
     S.syncMsg = errText(e);
@@ -1278,7 +1277,6 @@ function viewAzi() {
 
   h += todayHero(d, day);
   if (d === t) {
-    h += oferteHTML();
     h += inboxHTML();
     h += yesterdayHTML(d);
   }
@@ -1875,17 +1873,7 @@ const unreadMsgs = () => { const s = Date.parse(seenAt()) || 0, r = readIds(); r
 const unreadCount = () => unreadMsgs().length;
 function markRead(id) { store.set('dsp-read', [...readIds().filter(x => S.messages.some(m => m.id === x)), id]); }
 const msgLabel = m => m.kind === 'zilnic' ? 'Concluzia zilei' : m.kind === 'săptămânal' ? 'Rezumat' : m.kind === 'raspuns' ? 'Răspuns' : m.topic === 'antrenament' ? 'Antrenament' : '';
-// Temporary (Black Friday 2026): the PC watches mi.com/ro and publishes oferte.json on the data repo's "oferte" branch.
-let OFERTE = store.get('dsp-oferte', null);
-async function loadOferte() {
-  try { const raw = await readAt('oferte.json', 'oferte'); OFERTE = raw ? JSON.parse(raw) : null; store.set('dsp-oferte', OFERTE); schedule(); } catch (e) {}
-}
-function oferteHTML() {
-  const o = OFERTE;
-  if (!o?.items?.length || !(o.until >= today())) return '';
-  const rows = o.items.map(p => `<a class="inbox-row" href="${esc(p.url)}" target="_blank" rel="noopener"><strong>${p.new ? 'Nou · ' : ''}${esc(p.name)}</strong><span>${fmtN(p.price, 2)} lei${p.off ? ` · −${p.off}%, era ${fmtN(p.list, 2)}` : ''}${p.out ? ' · stoc epuizat' : ''} · ${esc(p.kind)}</span></a>`).join('');
-  return `<section class="card"><div class="row between"><span class="eyebrow">Oferte Xiaomi · până pe ${fmtShort(o.until)}</span><span class="muted small">${esc(o.updated || '')}</span></div>${rows}</section>`;
-}
+try { localStorage.removeItem('dsp-oferte'); } catch (e) {}
 function inboxHTML() {
   const un = unreadMsgs();
   const rows = un.slice(0, 5).map(m => `<button class="inbox-row" data-act="msg-open" data-id="${esc(m.id)}"><strong>${msgLabel(m) ? esc(msgLabel(m)) + ' · ' : ''}${esc(m.title || '')}</strong><span>${esc((m.body || '').split('\n')[0])}</span></button>`).join('');
