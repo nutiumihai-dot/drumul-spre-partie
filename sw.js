@@ -1,6 +1,6 @@
 // Network-first for the app's own files so updates arrive on the next open; cached copy when offline.
 // GitHub API calls are never cached here: the page talks to api.github.com directly.
-const CACHE = 'dsp-v32';
+const CACHE = 'dsp-v33';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -33,7 +33,7 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = { title: 'Summit Building', body: e.data ? e.data.text() : '' }; }
-  e.waitUntil(self.registration.showNotification(d.title || 'Mesaj de la antrenor', {
+  e.waitUntil(self.registration.showNotification(d.title || 'Mesaj de la Șerpa', {
     body: d.body || '', icon: 'icon-192.png', badge: 'icon-192.png', tag: d.tag || 'coach', renotify: true, data: { url: d.url || './#mesaje' }
   }));
 });

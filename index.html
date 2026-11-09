@@ -683,7 +683,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v32';
+const APP_VERSION = 'v33';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -871,7 +871,7 @@ async function buildPack() {
   const openReqs = S.requests.filter(r => r.status !== 'rezolvat').map(r => `[${r.id}] ${r.date}: ${r.text}`).join('\n');
   const catalog = Object.entries(S.catalog).map(([id, c]) => `${id}: ${c.name}`).join('\n');
   const now = new Date();
-  return `Ești antrenorul lui Mihai din aplicația Summit Building. Laptopul lui e închis, așa că faci acum, manual, ce face verificarea automată: procesezi ce e nou (mese fără "est", antrenamente și evaluări ale zilei de ieri, ieșiri, cardio, ocazii) după regulile din COACH.md de mai jos.
+  return `Ești Șerpa, antrenorul lui Mihai din aplicația Summit Building (în mesaje vorbești ca Șerpa, nu ca un AI anume). Laptopul lui e închis, așa că faci acum, manual, ce face verificarea automată: procesezi ce e nou (mese fără "est", antrenamente și evaluări ale zilei de ieri, ieșiri, cardio, ocazii) după regulile din COACH.md de mai jos.
 
 Acum: ${fmtDate(t)}, ora ${pad(now.getHours())}:${pad(now.getMinutes())}.
 
@@ -1685,7 +1685,7 @@ function viewFood() {
   <div class="row"><button class="btn primary" data-act="meal-new">+ Adaugă masă</button><button class="btn" data-act="meal-fav">Favorite</button></div>
   ${favItems().length ? `<section class="card"><span class="eyebrow">Adaugă rapid</span><div class="chips">${favItems().map(f => `<button class="chip" data-act="quick-item" data-id="${f.id}">${esc(f.name)}${f.qty ? ' · ' + esc(f.qty) : ''}</button>`).join('')}</div></section>` : ''}
   </div><div class="col-b">`;
-  if (!meals.length) h += `<section class="card flat"><p class="empty">Nicio masă notată în ziua asta. Scrie ce ai mâncat și cam cât; caloriile le estimează Claude.</p></section>`;
+  if (!meals.length) h += `<section class="card flat"><p class="empty">Nicio masă notată în ziua asta. Scrie ce ai mâncat și cam cât; caloriile le estimează Șerpa.</p></section>`;
   else {
     h += `<section class="card">`;
     meals.forEach(m => {
@@ -1877,7 +1877,7 @@ try { localStorage.removeItem('dsp-oferte'); } catch (e) {}
 function inboxHTML() {
   const un = unreadMsgs();
   const rows = un.slice(0, 5).map(m => `<button class="inbox-row" data-act="msg-open" data-id="${esc(m.id)}"><strong>${msgLabel(m) ? esc(msgLabel(m)) + ' · ' : ''}${esc(m.title || '')}</strong><span>${esc((m.body || '').split('\n')[0])}</span></button>`).join('');
-  return `<section class="card"><div class="row between"><span class="eyebrow">De la Claude${un.length ? ` · ${un.length} ${un.length === 1 ? 'mesaj nou' : 'mesaje noi'}` : ''}</span><button class="linkbtn small" data-act="tab" data-tab="mesaje">Toate mesajele</button></div>
+  return `<section class="card"><div class="row between"><span class="eyebrow">🏔️ De la Șerpa${un.length ? ` · ${un.length} ${un.length === 1 ? 'mesaj nou' : 'mesaje noi'}` : ''}</span><button class="linkbtn small" data-act="tab" data-tab="mesaje">Toate mesajele</button></div>
     ${rows || '<p class="muted small">Nimic nou.</p>'}${un.length > 5 ? `<span class="muted small">și încă ${un.length - 5} în Mesaje</span>` : ''}
     ${loopHTML()}</section>`;
 }
@@ -1903,7 +1903,7 @@ function loopHTML() {
   if (waiting) {
     h += `<span class="wait">Notițele trimise ${esc(ago(sent))} așteaptă procesarea.</span>`;
     if (Date.now() - Date.parse(sent) > 2 * 3600e3) h += `<span>PC-ul pare închis. <button class="linkbtn small" data-act="manual">Antrenor fără PC</button></span>`;
-  } else if (sent) h += '<span>Claude a văzut tot ce ai trimis.</span>';
+  } else if (sent) h += '<span>Șerpa a văzut tot ce ai trimis.</span>';
   if (!waiting) h += '<span><button class="linkbtn small" data-act="manual">Laptopul e închis? Antrenor fără PC</button></span>';
   return h + '</div>';
 }
@@ -1926,7 +1926,7 @@ function viewMessages() {
     if (it.date !== lastDay) { lastDay = it.date; h += `<h3 class="day-sep">${esc(fmtDate(it.date || today()))}</h3>`; }
     if (it.who === 'coach') {
       const m = it.m, time = m.ts ? new Date(m.ts) : null;
-      h += `<section class="card bubble coach"><div class="row between"><span class="eyebrow">Claude${time ? ' · ' + pad(time.getHours()) + ':' + pad(time.getMinutes()) : ''}</span>${msgLabel(m) ? `<span class="pill">${esc(msgLabel(m))}</span>` : ''}</div><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></section>`;
+      h += `<section class="card bubble coach"><div class="row between"><span class="eyebrow">🏔️ Șerpa${time ? ' · ' + pad(time.getHours()) + ':' + pad(time.getMinutes()) : ''}</span>${msgLabel(m) ? `<span class="pill">${esc(msgLabel(m))}</span>` : ''}</div><strong>${esc(m.title || '')}</strong><p class="pre">${esc(m.body || '')}</p></section>`;
     } else {
       const r = it.r, pendingSend = QUEUE.some(o => o.key === r.id);
       h += `<section class="card bubble me"><p class="pre">${esc(r.text)}</p><span class="small muted">${pendingSend ? 'netrimis încă' : r.status === 'rezolvat' ? 'Răspuns primit' : 'Trimis · aștept răspunsul'}</span></section>`;
@@ -2129,11 +2129,11 @@ function viewProfile() {
     return `<div class="ph ${cls}"><span class="dotc"></span><div><strong>${esc(ph.name)}</strong> <span class="muted small">${fmtShort(ph.from)} ${parse(ph.from).getFullYear()} – ${fmtShort(ph.to)} ${parse(ph.to).getFullYear()}</span><p class="small muted">${esc(ph.focus || '')}</p></div></div>`;
   }).join('')}</div></section>`;
   if (p.knee) h += `<section class="card"><h2>Genunchiul</h2><p>${esc(p.knee.summary || '')}</p>${p.knee.rules?.length ? `<ul>${p.knee.rules.map(r => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}</section>`;
-  h += `<section class="card"><h2>Notițe de la kineto</h2><p class="muted small">Ce ți-a spus kinetoterapeutul: exerciții recomandate, ce să eviți. Claude ține cont de ele la fiecare plan.</p>
+  h += `<section class="card"><h2>Notițe de la kineto</h2><p class="muted small">Ce ți-a spus kinetoterapeutul: exerciții recomandate, ce să eviți. Șerpa ține cont de ele la fiecare plan.</p>
     <textarea data-prof="kinetoNotes">${esc(p.kinetoNotes || '')}</textarea>
     <label class="f">Exerciții de evitat (câte unul pe rând)<textarea data-prof="avoid">${esc((p.avoid || []).join('\n'))}</textarea></label></section>`;
   if (p.equipment) h += `<section class="card"><h2>Echipament acasă</h2><ul>${(p.equipment.home || []).map(e => `<li>${esc(e)}</li>`).join('')}</ul>${p.equipment.plates ? `<p class="small"><strong>Discuri:</strong> ${esc(p.equipment.plates)}</p>` : ''}${p.equipment.notes ? `<p class="small muted">${esc(p.equipment.notes)}</p>` : ''}</section>`;
-  h += `<section class="card"><h2>Sală</h2><p class="muted">${esc(p.gym || 'Nicio sală aleasă încă. Când te hotărăști, spune-i lui Claude ce aparate are.')}</p></section>`;
+  h += `<section class="card"><h2>Sală</h2><p class="muted">${esc(p.gym || 'Nicio sală aleasă încă. Când te hotărăști, spune-i lui Șerpa ce aparate are.')}</p></section>`;
   h += `<section class="card"><h2>Notificări</h2><p class="muted small">Primești o notificare pe telefon când îți scriu un mesaj. Activează-le doar pe dispozitivul pe care vrei să le primești.</p>
     ${pushOn() ? '<p class="done-status">Activate pe acest dispozitiv</p><p class="muted small">Nu primești nimic? Reactivează-le: fac o abonare nouă.</p><button class="btn" data-act="push-on">Reactivează notificările</button>' : '<button class="btn" data-act="push-on">Activează notificările aici</button>'}</section>`;
   h += `<section class="card"><h2>Aplicația</h2><p class="muted small">Versiunea aplicației: <strong>${APP_VERSION}</strong>. Datele vin din repo-ul privat ${esc(GH.owner)}/${esc(GH.repo)}. ${QUEUE.length ? `${QUEUE.length} salvări așteaptă să fie trimise.` : 'Toate salvările sunt în GitHub.'}</p>
