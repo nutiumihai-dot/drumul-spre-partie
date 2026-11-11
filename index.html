@@ -211,6 +211,23 @@ textarea { min-height: 70px; resize: vertical; }
 .ex-name::after { content: "i"; font-size: 11px; font-weight: 700; font-style: italic; width: 18px; height: 18px; border-radius: 50%; background: var(--surface-2); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; }
 .ex-meta { display: flex; flex-wrap: wrap; gap: 6px; }
 .pill { font-size: 12px; font-weight: 700; background: var(--surface-2); border-radius: 8px; padding: 3px 9px; font-variant-numeric: tabular-nums; }
+.hc-strip { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 3px; margin: 8px 0 10px; }
+.hc-d { display: grid; justify-items: center; gap: 2px; font-size: 11px; padding: 4px 0; border-radius: 7px; background: var(--surface); font-variant-numeric: tabular-nums; }
+.hc-d.fin { background: var(--surface-2); color: var(--muted); }
+.hc-d.ieri { outline: 2px solid var(--accent); }
+.hc-d i { width: 9px; height: 9px; border-radius: 50%; display: block; background: var(--line); }
+.hc-d i.ok { background: var(--ok); } .hc-d i.warn { background: var(--warn); } .hc-d i.bad { background: var(--bad); } .hc-d i.ice { background: var(--ice); }
+.hc-d.fin i { opacity: .45; }
+.hc-verdict { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; margin-bottom: 6px; background: var(--surface-2); }
+.hc-verdict b { font-size: 18px; } .hc-verdict.ok b { color: var(--ok); } .hc-verdict.warn b { color: var(--warn); } .hc-verdict.bad b { color: var(--bad); }
+.hc-q { border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; margin: 8px 0; display: grid; gap: 6px; }
+.hc-days { list-style: none; margin: 8px 0; padding: 0; }
+.hc-row { padding: 8px 0; border-bottom: 1px solid var(--line); display: grid; gap: 2px; }
+.hc-row.fin { opacity: .55; }
+.hc-pill { font-size: 12px; font-weight: 700; border-radius: 8px; padding: 2px 8px; background: var(--surface-2); }
+.hc-pill.ok { color: var(--ok); } .hc-pill.warn { color: var(--warn); } .hc-pill.bad { color: var(--bad); } .hc-pill.ice { color: var(--ice); }
+.hc-anom { color: var(--warn); }
+.hc-warn { color: var(--bad); font-weight: 600; margin: 6px 0; }
 .pill.load { background: var(--accent-soft); color: var(--accent); }
 .setrow { display: grid; grid-template-columns: 32px 1fr 1fr 44px; gap: 6px; align-items: center; font-variant-numeric: tabular-nums; }
 .setrow.nokg { grid-template-columns: 32px 1fr 44px; }
@@ -585,6 +602,7 @@ function applyLocal(op) {
   else if (op.file === 'favorites.json') { if (op.replace && op.patch == null) delete S.favMap[op.key]; else S.favMap[op.key] = merge(S.favMap[op.key], op.patch); derive(); }
   else if (op.file === 'catalog.json') S.catalog[op.key] = merge(S.catalog[op.key], op.patch);
   else if (op.file === 'config/profile.json') S.profile = merge(S.profile, op.patch);
+  else if (op.file.startsWith('senzori/')) { S.senzori ||= {}; if (op.patch == null) delete S.senzori[op.key]; else S.senzori[op.key] = op.patch; }
   else if (op.file.startsWith('requests/')) { S.reqMap[op.key] = merge(S.reqMap[op.key], op.patch); derive(); }
 }
 function saveQueue() {
@@ -662,6 +680,7 @@ function pendingGroups() {
     }
     else if (g.file === 'catalog.json') title = `Catalog: ${exName(g.key)}`;
     else if (g.file === 'config/profile.json') title = 'Profil';
+    else if (g.file.startsWith('senzori/')) { const x = g.patch || {}; return { title: `Brățara · ${fmtDate(g.key)}`, sortKey: g.key, lines: [['Stare', `${HC_ST[hcStatusOf(x)]?.[0] || x.status} · purtată ${x.purtat ?? 0}%`], ['Pași', String(x.pasi?.total ?? 0)], ['Somn', x.somn?.min != null ? `${hcDur(x.somn.min)} (${x.somn.status})` : (x.somn?.status || '–')]] }; }
     else if (g.file.startsWith('requests/')) return { title: 'Mesaj către antrenor', sortKey: 'zz', lines: [['Text', g.patch.text || '']] };
     else if (g.file === 'config/push.json') return { title: 'Notificări', sortKey: 'zz', lines: [['Dispozitiv', g.deleted ? 'dezactivat' : 'activat']] };
     return { title, sortKey: g.key || 'zz', lines: describe(g.patch) };
@@ -673,6 +692,8 @@ function commitMessage(ops) {
   if (days.length) parts.push(days.join(', '));
   const np = ops.filter(o => o.photo).length;
   if (np) parts.push(np === 1 ? '1 poză' : `${np} poze`);
+  const nz = ops.filter(o => o.file.startsWith('senzori/')).length;
+  if (nz) parts.push(`brățara: ${nz === 1 ? '1 zi' : nz + ' zile'}`);
   if (ops.some(o => o.file === 'favorites.json')) parts.push('favorite');
   if (ops.some(o => o.file === 'catalog.json')) parts.push('catalog');
   if (ops.some(o => o.file === 'config/profile.json')) parts.push('profil');
@@ -683,7 +704,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v33';
+const APP_VERSION = 'v34';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -801,11 +822,11 @@ const CACHE_DAYS = 92;
 function cacheSave() {
   const from = addDays(today(), -CACHE_DAYS);
   const recent = obj => Object.fromEntries(Object.entries(obj || {}).filter(([k, v]) => (v?.date || k) >= from));
-  store.set('dsp-cache', { index: S.index, profile: S.profile, catalog: S.catalog, favMap: S.favMap, days: recent(S.days), plans: recent(S.plans), msgMap: recent(S.msgMap), reqMap: recent(S.reqMap) });
+  store.set('dsp-cache', { index: S.index, profile: S.profile, catalog: S.catalog, favMap: S.favMap, days: recent(S.days), plans: recent(S.plans), msgMap: recent(S.msgMap), reqMap: recent(S.reqMap), senzori: recent(S.senzori) });
 }
 function cacheLoad() {
   const c = store.get('dsp-cache', null); if (!c) return false;
-  Object.assign(S, { index: c.index || {}, profile: c.profile, catalog: c.catalog || {}, favMap: c.favMap || {}, days: c.days || {}, plans: c.plans || {}, msgMap: c.msgMap || {}, reqMap: c.reqMap || {} });
+  Object.assign(S, { index: c.index || {}, profile: c.profile, catalog: c.catalog || {}, favMap: c.favMap || {}, days: c.days || {}, plans: c.plans || {}, msgMap: c.msgMap || {}, reqMap: c.reqMap || {}, senzori: c.senzori || {} });
   derive(); S.ready.days = true; return true;
 }
 function derive() {
@@ -816,7 +837,8 @@ function derive() {
 const monthsBetween = (a, b) => { const out = []; let m = a.slice(0, 7); const end = b.slice(0, 7); while (m <= end) { out.push(m); const [y, mm] = m.split('-').map(Number); m = mm === 12 ? `${y + 1}-01` : `${y}-${pad(mm + 1)}`; } return out; };
 async function loadJson(path) { return (await readFile(path)).data; }
 async function loadMonth(m) {
-  const [d, p, ms, rq] = await Promise.all([`days/${m}.json`, `plan/${m}.json`, `messages/${m}.json`, `requests/${m}.json`].map(loadJson));
+  const [d, p, ms, rq, sz] = await Promise.all([`days/${m}.json`, `plan/${m}.json`, `messages/${m}.json`, `requests/${m}.json`, `senzori/${m}.json`].map(loadJson));
+  Object.assign(S.senzori ||= {}, sz || {});
   Object.assign(S.days, d || {}); Object.assign(S.plans, p || {}); Object.assign(S.msgMap, ms || {}); Object.assign(S.reqMap, rq || {});
   loadedMonths.add(m);
 }
@@ -835,8 +857,8 @@ async function pull() {
     const t = today();
     const months = monthsBetween(addDays(t, -40), addDays(t, 14));
     if (!months.includes(S.date.slice(0, 7))) months.push(S.date.slice(0, 7));
-    const old = { days: S.days, plans: S.plans, msgMap: S.msgMap, reqMap: S.reqMap };
-    S.days = {}; S.plans = {}; S.msgMap = {}; S.reqMap = {}; loadedMonths.clear();
+    const old = { days: S.days, plans: S.plans, msgMap: S.msgMap, reqMap: S.reqMap, senzori: S.senzori };
+    S.days = {}; S.plans = {}; S.msgMap = {}; S.reqMap = {}; S.senzori = {}; loadedMonths.clear();
     try { await Promise.all(months.map(loadMonth)); }
     catch (e) { Object.assign(S, old); throw e; }
     S.profile = prof; S.catalog = cat || {}; S.favMap = fav || {}; S.index = idx || {};
@@ -1098,9 +1120,16 @@ function maxPain(day) {
 const EN = { deficit: 400, adjust: 0, carryDays: 2, carryMax: 150, stepsBase: 2000 };
 const r10 = x => Math.round(x / 10) * 10;
 function energy() { return { ...EN, ...(S.profile?.targets?.energy || {}) }; }
-function stepsEq(day) {
-  const km = (day?.cardio || []).filter(c => c.type === 'banda').reduce((a, c) => a + (c.km ?? (c.speed && c.minutes ? c.speed * c.minutes / 60 : 0)), 0);
-  return day?.steps == null && !km ? null : (day?.steps || 0) + km * 1300;
+// Pașii zilei: cei scriși de mână, altfel cei de la brățară (senzori/, dacă ziua nu e „nepurtat”).
+// Banda: +1.300 pași/km, dar nu și când brățara a prins deja o plimbare cu durata benzii (±30%). La fel în antrenor/tinta.py.
+function stepsEq(day, d) {
+  const z = d ? S.senzori?.[d] : null;
+  const band = day?.steps == null && z && z.status !== 'nepurtat' ? z.pasi?.total ?? null : null;
+  const steps = day?.steps ?? band;
+  const walks = band != null ? z.plimbari || [] : [];
+  const km = (day?.cardio || []).filter(c => c.type === 'banda' && !walks.some(w => c.minutes && Math.abs(w.min - c.minutes) <= 0.3 * c.minutes))
+    .reduce((a, c) => a + (c.km ?? (c.speed && c.minutes ? c.speed * c.minutes / 60 : 0)), 0);
+  return steps == null && !km ? null : (steps || 0) + km * 1300;
 }
 function weightAt(d) {
   const w = rolling([d], x => S.days[x]?.weight ?? null)[0];
@@ -1110,7 +1139,7 @@ function weightAt(d) {
 }
 function steps3(d) {
   for (const n of [3, 7]) {
-    const v = []; for (let i = 1; i <= n; i++) { const s = stepsEq(S.days[addDays(d, -i)]); if (s != null) v.push(s); }
+    const v = []; for (let i = 1; i <= n; i++) { const x = addDays(d, -i), s = stepsEq(S.days[x], x); if (s != null) v.push(s); }
     if (v.length) return v.reduce((a, b) => a + b, 0) / v.length;
   }
   return null;
@@ -1271,12 +1300,149 @@ function ghForm() {
     <div class="row"><button class="btn primary" data-act="gh-save">${GH.token ? 'Salvează conexiunea' : 'Conectează'}</button>${GH.token ? '<button class="btn danger" data-act="gh-forget">Șterge tokenul de pe dispozitiv</button>' : ''}</div>`;
 }
 
+/* ---------- Brățara: import din Health Connect prin Summit Sync ---------- */
+// Summit Sync (Android, fără internet) e deschis printr-un intent; se întoarce aici cu #hc=<cod>.<json comprimat deflate-raw, base64url>.
+const HC_PKG = 'ro.summit.sync';
+const HC_APK = 'https://github.com/nutiumihai-dot/summit-sync/releases/latest/download/summit-sync.apk';
+const HC_LIVE = 7, HC_MAX = 14;
+const HC_ST = { complet: ['complet', 'ok'], partial: ['parțial', 'warn'], nepurtat: ['nepurtat', 'bad'], manual: ['manual', 'ice'] };
+const HC_V = { verde: ['🟢 Complet', 'ok'], galben: ['🟡 Parțial', 'warn'], rosu: ['🔴 Oprit', 'bad'] };
+const hcDur = m => m == null ? '–' : `${Math.floor(m / 60)}h${pad(m % 60)}`;
+const hcNow = () => { const d = new Date(); return `${iso(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+function hcRange() {
+  const t = today(); let from = addDays(t, -(HC_LIVE - 1));
+  const have = Object.keys(S.senzori || {}).sort();
+  if (have.length) for (let i = HC_MAX - 1; i >= HC_LIVE; i--) { const d = addDays(t, -i); if (d > have[0] && !S.senzori[d]) { from = d; break; } }
+  return [from, t];
+}
+function hcLaunch(opts = {}) {
+  const [from, to] = opts.azi ? [today(), today()] : hcRange();
+  const cod = Math.random().toString(36).slice(2, 10);
+  store.set('dsp-hc-req', { cod, from, to, azi: !!opts.azi, scos: !!opts.scos, ts: Date.now() });
+  const q = new URLSearchParams({ zile: `${from}..${to}`, cod, ret: location.origin + location.pathname });
+  if (opts.azi) q.set('mod', 'azi');
+  if (opts.scos) q.set('scos', '1');
+  location.href = `intent://import?${q}#Intent;scheme=summitsync;package=${HC_PKG};S.browser_fallback_url=${encodeURIComponent(HC_APK)};end`;
+}
+async function hcReceive() {
+  const m = /^#hc=([a-z0-9]+)\.([A-Za-z0-9_-]+)$/.exec(location.hash);
+  if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);   // fragmentul nu rămâne în adresă
+  const req = store.get('dsp-hc-req', null);
+  if (!req || req.cod !== m[1]) { toast('Am ignorat un rezultat Summit Sync care nu corespunde ultimei cereri.'); return; }
+  try {
+    const bin = Uint8Array.from(atob(m[2].replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+    const r = JSON.parse(await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text());
+    if (r.cod !== req.cod) throw new Error('cod');
+    S.hc = r; S.hcManual = {}; store.set('dsp-hc-res', r);
+    S.tab = 'azi'; S.date = today(); render();
+  } catch (e) { toast('Nu am putut citi rezultatul de la Summit Sync.'); }
+}
+function hcRestore() { const r = store.get('dsp-hc-res', null), q = store.get('dsp-hc-req', null); if (r && q && r.cod === q.cod) { S.hc = r; S.hcManual = {}; } }
+function hcClear() { S.hc = null; store.set('dsp-hc-res', null); }
+const hcKey = o => o ? JSON.stringify({ ...o, importat: 0, sincronizatPana: 0 }) : '';
+function hcFinal(d) { return d < addDays(today(), -(HC_LIVE - 1)) && !!S.senzori?.[d]; }
+function hcManualSleep() {
+  const { culcare: a, ridicare: b } = S.hcManual || {};
+  if (!/^\d\d:\d\d$/.test(a || '') || !/^\d\d:\d\d$/.test(b || '')) return null;
+  const mm = s => +s.slice(0, 2) * 60 + +s.slice(3);
+  return { status: 'manual', culcare: a, ridicare: b, min: (mm(b) - mm(a) + 1440) % 1440 };
+}
+const hcMin = s => +s.slice(0, 2) * 60 + +s.slice(3);
+// prima alarmă: ce a scris acum, altfel ultima folosită pe acest telefon, altfel următoarea alarmă din telefon (trimisă de Summit Sync)
+function hcAlarm() { const v = S.hcManual?.alarma; return v !== undefined ? v : (store.get('dsp-hc-alarma', '') || S.hc?.alarma || ''); }
+function hcPrepared() {
+  const r = S.hc, t = today(), out = [];
+  for (const [d, day0] of Object.entries(r?.zile || {})) {
+    if (hcFinal(d)) continue;
+    const day = { ...day0 }, old = S.senzori?.[d];
+    const man = d === t ? hcManualSleep() : null;
+    if (man) day.somn = man;
+    else if (d === t && day.somn?.status === 'ok') {
+      const al = hcAlarm();
+      if (/^\d\d:\d\d$/.test(al)) { const sn = hcMin(day.somn.ridicare) - hcMin(al); if (sn >= 0 && sn <= 180) day.somn = { ...day.somn, alarma: al, snoozeMin: sn }; }
+    }
+    else if (old?.somn?.status === 'manual' && day.somn?.status !== 'ok') day.somn = old.somn;
+    if (hcKey(day) === hcKey(old)) continue;
+    out.push([d, day]);
+  }
+  return out;
+}
+function hcAdd() {
+  const now = hcNow(), list = hcPrepared();
+  const al = hcAlarm(); if (/^\d\d:\d\d$/.test(al)) store.set('dsp-hc-alarma', al);
+  for (const [d, day] of list) {
+    const file = `senzori/${d.slice(0, 7)}.json`;
+    QUEUE = QUEUE.filter(o => !(o.file === file && o.key === d));   // al doilea import îl înlocuiește pe primul
+    queueOp({ file, key: d, patch: { ...day, importat: now }, replace: true });
+  }
+  hcClear(); render();
+  toast(list.length ? `Am pus în notițe ${list.length === 1 ? 'o zi' : list.length + ' zile'} de la brățară.` : 'Nimic nou de la brățară.');
+}
+function hcStatusOf(day) { return day ? (day.status === 'nepurtat' && day.somn?.status === 'manual' ? 'manual' : day.status) : null; }
+function hcStrip() {
+  const t = today(); let h = '<div class="hc-strip">';
+  for (let i = HC_MAX - 1; i >= 0; i--) {
+    const d = addDays(t, -i), day = S.hc?.zile?.[d] && !hcFinal(d) ? S.hc.zile[d] : S.senzori?.[d];
+    const st = hcStatusOf(day), fin = i >= HC_LIVE;
+    h += `<span class="hc-d${fin ? ' fin' : ''}${i === 1 ? ' ieri' : ''}" title="${esc(d)}${st ? ' · ' + esc(HC_ST[st]?.[0] || st) : ''}"><i class="${st ? HC_ST[st]?.[1] || '' : 'none'}"></i>${+d.slice(8)}</span>`;
+  }
+  return h + '</div>';
+}
+function hcDayRow(d, day, changed) {
+  const st = hcStatusOf(day), [lab, cls] = HC_ST[st] || [st || '–', ''];
+  const s = day.somn, p = day.pasi || {};
+  const somn = !s ? '' : s.status === 'ok' || s.status === 'manual' ? `${hcDur(s.min)} · ${esc(s.culcare)}–${esc(s.ridicare)}${s.snoozeMin ? ` · snooze ${s.snoozeMin}′` : ''}${s.scor != null ? ` · scor ${s.scor}` : ''}` : s.status === 'procesare' ? 'somn în procesare' : 'somn lipsă';
+  const ex = (day.antrenamente || []).map(a => `${esc(a.tip)} ${a.min}′${a.pulsMediu ? ` ♥${a.pulsMediu}` : ''}`).concat((day.plimbari || []).map(w => `plimbare ${w.min}′`));
+  return `<li class="hc-row${hcFinal(d) ? ' fin' : ''}"><div class="row between"><b>${esc(fmtShort(d))}</b><span class="hc-pill ${cls}">${esc(lab)} · ${day.purtat ?? 0}%</span></div>
+    <div class="small">${(p.total ?? 0).toLocaleString('ro-RO')} pași${p.telefon ? ` (telefon ${p.telefon.toLocaleString('ro-RO')})` : ''}${day.puls?.repaus ? ` · repaus ${day.puls.repaus}` : ''}${somn ? ' · ' + somn : ''}</div>
+    ${ex.length ? `<div class="small muted">${ex.join(' · ')}</div>` : ''}${(day.anomalii || []).length ? `<div class="small hc-anom">⚠ ${day.anomalii.map(a => `${esc(a.tip.replace('_', ' '))} ${esc(a.start)}`).join(', ')}</div>` : ''}
+    ${hcFinal(d) ? '<div class="small muted">finală, nu se mai schimbă</div>' : changed ? '' : '<div class="small muted">neschimbată</div>'}</li>`;
+}
+function hcCardHTML() {
+  const r = S.hc;
+  const last = Object.values(S.senzori || {}).map(x => x.importat).filter(Boolean).sort().pop();
+  let h = `<section class="card hc"><div class="row between"><h2>Brățara</h2></div>${hcStrip()}`;
+  const lastSync = Object.values(S.senzori || {}).map(x => x.sincronizatPana).filter(Boolean).sort().pop();
+  if (!r && lastSync && lastSync.slice(0, 10) < addDays(today(), -3))
+    h += `<p class="hc-warn">Brățara nu s-a mai sincronizat din ${esc(fmtShort(lastSync.slice(0, 10)))}. Ține pulsul și somnul doar 7 zile: deschide Mi Fitness cu Bluetooth pornit, apoi încarcă.</p>`;
+  if (!r) {
+    h += `<p class="small muted">${last ? `Ultimul import: ${esc(last.replace('T', ' '))}.` : 'Niciun import încă.'} Sincronizează întâi brățara în Mi Fitness.</p>
+      <div class="row"><button class="btn primary" data-act="hc-import">Încarcă din Health Connect</button><button class="btn sm" data-act="hc-azi">Test: azi până acum</button></div></section>`;
+    return h;
+  }
+  const [vl, vc] = HC_V[r.verdict] || [r.verdict, ''];
+  h += `<div class="hc-verdict ${vc}"><b>${esc(vl)}</b><span class="small">${r.mod === 'azi' ? 'azi până acum · ' : ''}${r.sincronizatPana ? `brățara sincronizată până la ${esc(r.sincronizatPana.replace('T', ' '))}` : ''}</span></div>`;
+  const ver = r.verificari || {};
+  h += `<p class="small muted">${['V0', 'V1', 'V2', 'V3', 'V4'].filter(k => ver[k]).map(k => `${k} ${esc(ver[k])}`).join(' · ')}</p>`;
+  for (const q of r.intrebari || []) {
+    h += `<div class="hc-q"><p>${esc(q.text)}</p><div class="row">`;
+    for (const b of q.butoane || []) {
+      if (b === 'reincearca') h += `<button class="btn sm" data-act="hc-retry">${q.id === 'V2' ? 'Am sincronizat acum, reîncearcă' : 'Reîncearcă'}</button>`;
+      if (b === 'scos') h += `<button class="btn sm" data-act="hc-scos">Am scos brățara atunci</button>`;
+    }
+    if (q.id === 'V3') h += `<label class="f">La culcare<input type="time" data-hc="culcare" value="${esc(S.hcManual?.culcare || '')}"></label><label class="f">Trezire<input type="time" data-hc="ridicare" value="${esc(S.hcManual?.ridicare || '')}"></label>`;
+    h += '</div></div>';
+  }
+  if (r.verdict !== 'rosu' && r.zile?.[today()]?.somn?.status === 'ok')
+    h += `<div class="hc-q"><div class="row"><label class="f">Prima alarmă azi<input type="time" data-hc="alarma" value="${esc(hcAlarm())}"></label></div><p class="small muted">Snooze = ridicarea din pat (${esc(r.zile[today()].somn.ridicare)}) minus prima alarmă. Lasă gol dacă n-ai avut alarmă.</p></div>`;
+  if (r.verdict !== 'rosu') {
+    const prep = hcPrepared(), pm = Object.fromEntries(prep);
+    const changed = new Set(prep.map(x => x[0]));
+    const days = Object.entries(r.zile || {}).sort((a, b) => b[0].localeCompare(a[0]));
+    h += `<ul class="hc-days">${days.map(([d, day]) => hcDayRow(d, pm[d] || day, changed.has(d))).join('')}</ul>
+      <div class="row"><button class="btn primary" data-act="hc-add">${changed.size ? `Adaugă în notițe (${changed.size === 1 ? 'o zi' : changed.size + ' zile'})` : 'Nimic nou · închide'}</button><button class="btn sm" data-act="hc-drop">Renunță</button></div>`;
+  } else h += `<div class="row"><button class="btn sm" data-act="hc-drop">Renunță</button></div>`;
+  return h + '</section>';
+}
+
 function viewAzi() {
   const d = S.date, day = S.days[d] || {}, t = today();
   let h = '<div class="v v-azi"><div class="col-a">';
 
   h += todayHero(d, day);
   if (d === t) {
+    h += hcCardHTML();
     h += inboxHTML();
     h += yesterdayHTML(d);
   }
@@ -1286,8 +1452,8 @@ function viewAzi() {
   h += `<section class="card"><h2>Dimineața</h2>
     <div class="grid2">
       <label class="f">Greutate azi dimineață (kg)<input type="text" inputmode="decimal" data-path="weight" data-type="num" value="${day.weight ?? ''}" placeholder="ex. 87,6"></label>
-      <label class="f">Somn azi-noapte (ore)<input type="text" inputmode="decimal" data-path="sleepHours" data-type="num" value="${day.sleepHours ?? ''}" placeholder="ex. 7,5"></label>
-      <label class="f">Pași ieri, ${esc(fmtShort(yd))} (total)<input type="text" inputmode="numeric" data-path="steps" data-date="${yd}" data-type="num" value="${S.days[yd]?.steps ?? ''}" placeholder="din Google Fit"></label>
+      <label class="f">Somn azi-noapte (ore)<input type="text" inputmode="decimal" data-path="sleepHours" data-type="num" value="${day.sleepHours ?? ''}" placeholder="${S.senzori?.[d]?.somn?.min ? 'brățara: ' + (S.senzori[d].somn.min / 60).toFixed(1).replace('.', ',') : 'ex. 7,5'}"></label>
+      <label class="f">Pași ieri, ${esc(fmtShort(yd))} (total)<input type="text" inputmode="numeric" data-path="steps" data-date="${yd}" data-type="num" value="${S.days[yd]?.steps ?? ''}" placeholder="${S.senzori?.[yd]?.pasi ? 'brățara: ' + S.senzori[yd].pasi.total : 'din Google Fit'}"></label>
     </div>
     ${q('Cât de greu te-ai trezit azi', 'wake', day.wake ?? null, { min: 1, max: 5, hint: '1 = ușor · 5 = foarte greu' })}
     ${q('Febră musculară azi: picioare', 'domsLegs', day.domsLegs ?? null, { hint: 'coapse, fesieri, gambe · 0 = deloc · 10 = abia mă mișc' })}
@@ -1341,7 +1507,7 @@ function todayHero(d, day) {
   const plan = S.plans[d];
   const checks = [
     ['Greutate', day.weight != null],
-    ['Pași ieri', S.days[addDays(d, -1)]?.steps != null],
+    ['Pași ieri', S.days[addDays(d, -1)]?.steps != null || !!S.senzori?.[addDays(d, -1)]?.pasi],
     ['Mese', (day.meals || []).length >= 2],
     [plan?.blocks?.length ? 'Antrenament' : 'Mișcare', !!(day.log?.completed && day.log.completed !== 'sarit') || !!day.outdoor || !!(day.cardio || []).length]
   ];
@@ -2433,6 +2599,12 @@ document.addEventListener('click', async e => {
     store.set('dsp-gh', GH); toast('Conexiune salvată. Încarc datele…'); S.ready.days = false; pull();
   }
   else if (a === 'gh-forget') { GH.token = ''; store.set('dsp-gh', GH); store.set('dsp-cache', null); S.ready.days = false; render(); toast('Tokenul a fost șters de pe acest dispozitiv.'); }
+  else if (a === 'hc-import') hcLaunch();
+  else if (a === 'hc-azi') hcLaunch({ azi: true });
+  else if (a === 'hc-retry') { const q = store.get('dsp-hc-req', {}); hcLaunch({ azi: q.azi }); }
+  else if (a === 'hc-scos') { const q = store.get('dsp-hc-req', {}); hcLaunch({ azi: q.azi, scos: true }); }
+  else if (a === 'hc-add') hcAdd();
+  else if (a === 'hc-drop') { hcClear(); render(); }
   else if (a === 'today') { S.date = today(); render(); }
   else if (a === 'set') {
     const v = b.dataset.str ? b.dataset.val : +b.dataset.val;
@@ -2491,6 +2663,7 @@ $('#view').addEventListener('change', async e => {
   }
 });
 $('#view').addEventListener('input', e => {
+  if (e.target.dataset.hc) { (S.hcManual ||= {})[e.target.dataset.hc] = e.target.value; return; }
   if (e.target.id !== 'catSearch') return;
   const qv = e.target.value.trim().toLowerCase();
   $$('[data-catgroup]').forEach(g => {
@@ -2508,6 +2681,7 @@ async function updateApp() {
 }
 function init() {
   if (GH.token) cacheLoad();
+  hcRestore(); hcReceive(); addEventListener('hashchange', hcReceive);
   render();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   pull();
