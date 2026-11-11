@@ -704,7 +704,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v35';
+const APP_VERSION = 'v36';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -1458,7 +1458,7 @@ function viewAzi() {
   h += `<section class="card"><h2>Dimineața</h2>
     <div class="grid2">
       <label class="f">Greutate azi dimineață (kg)<input type="text" inputmode="decimal" data-path="weight" data-type="num" value="${day.weight ?? ''}" placeholder="ex. 87,6"></label>
-      <label class="f">Somn azi-noapte (ore)<input type="text" inputmode="decimal" data-path="sleepHours" data-type="num" value="${day.sleepHours ?? ''}" placeholder="${S.senzori?.[d]?.somn?.min ? 'brățara: ' + (S.senzori[d].somn.min / 60).toFixed(1).replace('.', ',') : 'ex. 7,5'}"></label>
+      <label class="f">Somn azi-noapte (ore)<input type="text" inputmode="decimal" data-path="sleepHours" data-type="num" value="${day.sleepHours ?? ''}" placeholder="${S.senzori?.[d]?.somn?.min ? 'brățara: ' + hcDur(S.senzori[d].somn.min) : 'ex. 7,5'}"></label>
       <label class="f">Pași ieri, ${esc(fmtShort(yd))} (total)<input type="text" inputmode="numeric" data-path="steps" data-date="${yd}" data-type="num" value="${S.days[yd]?.steps ?? ''}" placeholder="${S.senzori?.[yd]?.pasi ? 'brățara: ' + S.senzori[yd].pasi.total : 'din Google Fit'}"></label>
     </div>
     ${q('Cât de greu te-ai trezit azi', 'wake', day.wake ?? null, { min: 1, max: 5, hint: '1 = ușor · 5 = foarte greu' })}
