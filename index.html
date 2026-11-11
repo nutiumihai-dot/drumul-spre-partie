@@ -704,7 +704,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v34';
+const APP_VERSION = 'v35';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -1349,8 +1349,12 @@ function hcManualSleep() {
   return { status: 'manual', culcare: a, ridicare: b, min: (mm(b) - mm(a) + 1440) % 1440 };
 }
 const hcMin = s => +s.slice(0, 2) * 60 + +s.slice(3);
-// prima alarmă: ce a scris acum, altfel ultima folosită pe acest telefon, altfel următoarea alarmă din telefon (trimisă de Summit Sync)
-function hcAlarm() { const v = S.hcManual?.alarma; return v !== undefined ? v : (store.get('dsp-hc-alarma', '') || S.hc?.alarma || ''); }
+// prima alarmă: ce a scris acum; altfel cea care a sunat azi-noapte (jurnalul de alarme din Summit Sync);
+// altfel ultima folosită pe acest telefon; altfel următoarea alarmă programată
+function hcAlarm() {
+  const v = S.hcManual?.alarma; if (v !== undefined) return v;
+  return S.hc?.zile?.[today()]?.somn?.alarma || store.get('dsp-hc-alarma', '') || S.hc?.alarma || '';
+}
 function hcPrepared() {
   const r = S.hc, t = today(), out = [];
   for (const [d, day0] of Object.entries(r?.zile || {})) {
@@ -1358,9 +1362,10 @@ function hcPrepared() {
     const day = { ...day0 }, old = S.senzori?.[d];
     const man = d === t ? hcManualSleep() : null;
     if (man) day.somn = man;
-    else if (d === t && day.somn?.status === 'ok') {
+    else if (d === t && day.somn?.status === 'ok' && (S.hcManual?.alarma !== undefined || !day.somn.alarma)) {
       const al = hcAlarm();
-      if (/^\d\d:\d\d$/.test(al)) { const sn = hcMin(day.somn.ridicare) - hcMin(al); if (sn >= 0 && sn <= 180) day.somn = { ...day.somn, alarma: al, snoozeMin: sn }; }
+      if (/^\d\d:\d\d$/.test(al)) { const sn = hcMin(day.somn.ridicare) - hcMin(al); if (sn >= 0 && sn <= 180) { const { alarmeSunat, alarmaOprita, snoozeSursa, ...rest } = day.somn; day.somn = { ...rest, alarma: al, snoozeMin: sn }; } }
+      else if (S.hcManual?.alarma === '') { const { alarma, alarmeSunat, alarmaOprita, snoozeSursa, snoozeMin, ...rest } = day.somn; day.somn = rest; }
     }
     else if (old?.somn?.status === 'manual' && day.somn?.status !== 'ok') day.somn = old.somn;
     if (hcKey(day) === hcKey(old)) continue;
@@ -1392,7 +1397,7 @@ function hcStrip() {
 function hcDayRow(d, day, changed) {
   const st = hcStatusOf(day), [lab, cls] = HC_ST[st] || [st || '–', ''];
   const s = day.somn, p = day.pasi || {};
-  const somn = !s ? '' : s.status === 'ok' || s.status === 'manual' ? `${hcDur(s.min)} · ${esc(s.culcare)}–${esc(s.ridicare)}${s.snoozeMin ? ` · snooze ${s.snoozeMin}′` : ''}${s.scor != null ? ` · scor ${s.scor}` : ''}` : s.status === 'procesare' ? 'somn în procesare' : 'somn lipsă';
+  const somn = !s ? '' : s.status === 'ok' || s.status === 'manual' ? `${hcDur(s.min)} · ${esc(s.culcare)}–${esc(s.ridicare)}${s.snoozeMin ? ` · snooze ${s.snoozeMin}′${s.alarmeSunat > 1 ? ` (${s.alarmeSunat} alarme)` : ''}` : ''}${s.scor != null ? ` · scor ${s.scor}` : ''}` : s.status === 'procesare' ? 'somn în procesare' : 'somn lipsă';
   const ex = (day.antrenamente || []).map(a => `${esc(a.tip)} ${a.min}′${a.pulsMediu ? ` ♥${a.pulsMediu}` : ''}`).concat((day.plimbari || []).map(w => `plimbare ${w.min}′`));
   return `<li class="hc-row${hcFinal(d) ? ' fin' : ''}"><div class="row between"><b>${esc(fmtShort(d))}</b><span class="hc-pill ${cls}">${esc(lab)} · ${day.purtat ?? 0}%</span></div>
     <div class="small">${(p.total ?? 0).toLocaleString('ro-RO')} pași${p.telefon ? ` (telefon ${p.telefon.toLocaleString('ro-RO')})` : ''}${day.puls?.repaus ? ` · repaus ${day.puls.repaus}` : ''}${somn ? ' · ' + somn : ''}</div>
@@ -1425,7 +1430,8 @@ function hcCardHTML() {
     h += '</div></div>';
   }
   if (r.verdict !== 'rosu' && r.zile?.[today()]?.somn?.status === 'ok')
-    h += `<div class="hc-q"><div class="row"><label class="f">Prima alarmă azi<input type="time" data-hc="alarma" value="${esc(hcAlarm())}"></label></div><p class="small muted">Snooze = ridicarea din pat (${esc(r.zile[today()].somn.ridicare)}) minus prima alarmă. Lasă gol dacă n-ai avut alarmă.</p></div>`;
+    { const sm = r.zile[today()].somn;
+      h += `<div class="hc-q"><div class="row"><label class="f">Prima alarmă azi<input type="time" data-hc="alarma" value="${esc(hcAlarm())}"></label></div><p class="small muted">${sm.alarma ? `Din telefon: a sunat ${sm.alarmeSunat === 1 ? 'o dată' : sm.alarmeSunat + ' ori'}${sm.alarmaOprita ? `, oprită la ${esc(sm.alarmaOprita)}` : ''}. Schimb-o doar dacă e greșită. ` : ''}Snooze = ridicarea din pat (${esc(sm.ridicare)}) minus prima alarmă. Lasă gol dacă n-ai avut alarmă.</p></div>`; }
   if (r.verdict !== 'rosu') {
     const prep = hcPrepared(), pm = Object.fromEntries(prep);
     const changed = new Set(prep.map(x => x[0]));
