@@ -36,6 +36,7 @@
   --warn: #E89A00;
   --bad: #D93A3A;
   --c-a: #FF6B3D; --c-b: #E2546A; --c-c: #7A3E8F; --c-d: #E89A00; --c-out: #1B9AAA;
+  --s-deep: #3F2D7A; --s-rem: #1B9AAA; --s-light: #A98BD8; --s-awake: #FFB347;
   --shadow: 0 1px 2px rgba(46, 35, 71, .06), 0 6px 18px rgba(46, 35, 71, .07);
   --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -49,6 +50,7 @@
     --route: #4A3B63;
     --ok: #3CCB8A; --warn: #F5B53A; --bad: #F2645A;
     --c-a: #FF8355; --c-b: #F06D82; --c-c: #B07BD0; --c-d: #F5B53A; --c-out: #3CC1CF;
+    --s-deep: #7C66D9; --s-rem: #3CC1CF; --s-light: #CDB6F0; --s-awake: #F5B53A;
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 18px rgba(0, 0, 0, .25); color-scheme: dark;
   }
 }
@@ -59,6 +61,7 @@
   --route: #4A3B63;
   --ok: #3CCB8A; --warn: #F5B53A; --bad: #F2645A;
   --c-a: #FF8355; --c-b: #F06D82; --c-c: #B07BD0; --c-d: #F5B53A; --c-out: #3CC1CF;
+  --s-deep: #7C66D9; --s-rem: #3CC1CF; --s-light: #CDB6F0; --s-awake: #F5B53A;
   --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 18px rgba(0, 0, 0, .25); color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -282,6 +285,46 @@ textarea { min-height: 70px; resize: vertical; }
 .chart .d-ok { fill: var(--ok); } .chart .d-warn { fill: var(--warn); } .chart .d-bad { fill: var(--bad); }
 .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.seg { display: flex; background: var(--surface-2); border-radius: 999px; padding: 4px; gap: 4px; }
+.seg button { flex: 1; border: 0; background: none; border-radius: 999px; padding: 8px 12px; font-weight: 700; font-size: 14px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
+.pnav { display: flex; align-items: center; gap: 8px; }
+.pnav h2 { flex: 1; text-align: center; margin: 0; font-size: 20px; }
+.pnav input[type=date] { width: auto; padding: 6px 8px; font-size: 14px; }
+.chart .hit { fill: transparent; cursor: pointer; }
+.chart .hit:hover, .chart .hit.on { fill: var(--fg); opacity: .07; }
+.tip { position: fixed; z-index: 40; background: var(--fg); color: var(--bg); font-size: 13px; font-weight: 700; padding: 7px 11px; border-radius: 10px; pointer-events: none; transform: translate(-50%, calc(-100% - 10px)); max-width: min(320px, 90vw); white-space: pre-line; text-align: center; box-shadow: var(--shadow); }
+.chart .s-p, .lg-p { fill: var(--s-deep); background: var(--s-deep); } .chart .s-r, .lg-r { fill: var(--s-rem); background: var(--s-rem); }
+.chart .s-u, .lg-u { fill: var(--s-light); background: var(--s-light); } .chart .s-t, .lg-t { fill: var(--s-awake); background: var(--s-awake); }
+.chart .s-s { fill: var(--s-light); opacity: .7; }
+.chart .z-u, .lg-zu { fill: var(--ok); background: var(--ok); } .chart .z-m, .lg-zm { fill: var(--warn); background: var(--warn); } .chart .z-i, .lg-zi { fill: var(--bad); background: var(--bad); }
+.chart .w-c { fill: var(--ok); } .chart .w-p { fill: var(--c-out); } .chart .w-m { fill: var(--warn); } .chart .w-s { fill: var(--bad); opacity: .55; }
+.chart .span { fill: var(--s-deep); opacity: .85; }
+.chart .shade { fill: var(--s-deep); opacity: .09; } .chart .shade-w { fill: var(--accent); opacity: .13; }
+.chart .hr-band { fill: var(--bad); opacity: .16; } .chart .line.hr { stroke: var(--bad); stroke-width: 2; }
+.chart .line.avg { stroke: var(--fg); stroke-width: 2; opacity: .55; }
+.chart .dot-o2 { fill: var(--c-out); } .chart .line.o2 { stroke: var(--c-out); } .chart .bar-steps { fill: var(--ice); }
+.chart .ref { stroke: var(--fg); stroke-width: 1.5; stroke-dasharray: 4 3; opacity: .6; } .chart .ref-t { font-size: 11px; }
+.chart .now { stroke: var(--accent); stroke-width: 1.5; }
+.pbar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--surface-2); }
+.pbar span { display: block; height: 100%; }
+.kv2 { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 14px; margin: 8px 0 0; }
+.kv2 dt { color: var(--muted); } .kv2 dd { margin: 0; font-weight: 600; }
+.wcard + .wcard { border-top: 1px dashed var(--line); padding-top: 10px; margin-top: 10px; }
+.nlist { display: flex; flex-direction: column; gap: 2px; }
+.nrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; border: 0; background: none; text-align: left; padding: 6px 4px; border-radius: 10px; width: 100%; color: var(--fg); }
+.nrow:hover { background: var(--surface-2); }
+.nrow .nm { font-weight: 700; font-size: 15px; } .nrow .nm small { font-weight: 400; color: var(--muted); font-size: 13px; }
+.nrow .pc { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px; }
+.nrow .track { grid-column: 1 / -1; position: relative; height: 10px; background: var(--surface-2); border-radius: 5px; overflow: hidden; }
+.nrow .track span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: var(--accent); }
+.nrow .track i { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--fg); opacity: .45; }
+.nrow.ok .track span { background: var(--ok); } .nrow.warn .track span { background: var(--warn); } .nrow.bad .track span { background: var(--bad); }
+.st { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 1px 6px; color: #fff; } .st.ok { background: var(--ok); } .st.warn { background: var(--warn); } .st.bad { background: var(--bad); }
+.ngroup { margin: 10px 0 2px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.lack { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.charts > .wide { grid-column: 1 / -1; }
+.sec-title { margin: 22px 0 10px; }
 
 /* calendar */
 .cal { display: flex; flex-direction: column; }
@@ -412,6 +455,7 @@ a.inbox-row { color: inherit; text-decoration: none; margin-top: 6px; }
   .toast { bottom: 24px; }
   .v-azi, .v-mancare { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 22px; align-items: start; }
   .tiles { grid-template-columns: repeat(4, 1fr); }
+  .tiles.six { grid-template-columns: repeat(3, 1fr); }
   .charts, .weeks { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
   .masonry { display: block; column-count: 2; column-gap: 22px; }
   .masonry > * { break-inside: avoid; margin-bottom: 22px; }
@@ -460,6 +504,7 @@ a.inbox-row { color: inherit; text-decoration: none; margin-top: 6px; }
 <div class="wo" id="wo" hidden role="dialog" aria-modal="true" aria-label="Antrenament"></div>
 <div class="sheet" id="sheet" hidden><div class="sheet-panel" id="sheetPanel" role="dialog" aria-modal="true"></div></div>
 <div class="toast" id="toast" hidden></div>
+<div class="tip" id="tip" hidden></div>
 
 <script>
 const $ = (s, r = document) => r.querySelector(s);
@@ -549,7 +594,7 @@ const SRC = [['acasa', 'Acasă'], ['meniu', 'Meniul zilei'], ['glovo', 'Glovo / 
 const PREP = ['', 'crud', 'fiert', 'la grătar', 'la cuptor', 'prăjit', 'altul'];
 const OUT = [['drumetie', 'Drumeție'], ['plimbare', 'Plimbare'], ['inot', 'Înot'], ['bicicleta', 'Bicicletă'], ['altul', 'Altul']];
 
-const S = { index: {}, ready: {}, sync: 'ok', tab: 'azi', date: today(), profile: null, days: {}, plans: {}, catalog: {}, msgMap: {}, reqMap: {}, favMap: {}, messages: [], requests: [], favorites: [], fallback: {}, range: 30, calStart: null, confirm: null };
+const S = { index: {}, ready: {}, sync: 'ok', tab: 'azi', date: today(), profile: null, days: {}, plans: {}, catalog: {}, msgMap: {}, reqMap: {}, favMap: {}, messages: [], requests: [], favorites: [], fallback: {}, range: 30, calStart: null, confirm: null, pv: 'general', pDate: null, det: {}, nutr: 'vitD' };
 try { const t = localStorage.getItem('dsp-tab'); if (t) S.tab = t; } catch (e) {}
 if (/^#(azi|mesaje|mancare|progres|calendar|catalog|profil)$/.test(location.hash)) S.tab = location.hash.slice(1);
 
@@ -602,6 +647,7 @@ function applyLocal(op) {
   else if (op.file === 'favorites.json') { if (op.replace && op.patch == null) delete S.favMap[op.key]; else S.favMap[op.key] = merge(S.favMap[op.key], op.patch); derive(); }
   else if (op.file === 'catalog.json') S.catalog[op.key] = merge(S.catalog[op.key], op.patch);
   else if (op.file === 'config/profile.json') S.profile = merge(S.profile, op.patch);
+  else if (op.file.startsWith('senzori/detaliu/')) { if (op.patch == null) delete S.det[op.key]; else S.det[op.key] = op.patch; }
   else if (op.file.startsWith('senzori/')) { S.senzori ||= {}; if (op.patch == null) delete S.senzori[op.key]; else S.senzori[op.key] = op.patch; }
   else if (op.file.startsWith('requests/')) { S.reqMap[op.key] = merge(S.reqMap[op.key], op.patch); derive(); }
 }
@@ -680,6 +726,7 @@ function pendingGroups() {
     }
     else if (g.file === 'catalog.json') title = `Catalog: ${exName(g.key)}`;
     else if (g.file === 'config/profile.json') title = 'Profil';
+    else if (g.file.startsWith('senzori/detaliu/')) { const x = g.patch || {}; return { title: `Brățara, detaliu · ${fmtDate(g.key)}`, sortKey: g.key + 'z', lines: [['Pe ore', [x.puls && 'puls', x.spo2 && 'SpO2', x.somn && 'fazele somnului', x.pasi && 'pași'].filter(Boolean).join(', ') || '–']] }; }
     else if (g.file.startsWith('senzori/')) { const x = g.patch || {}; return { title: `Brățara · ${fmtDate(g.key)}`, sortKey: g.key, lines: [['Stare', `${HC_ST[hcStatusOf(x)]?.[0] || x.status} · purtată ${x.purtat ?? 0}%`], ['Pași', String(x.pasi?.total ?? 0)], ['Somn', x.somn?.min != null ? `${hcDur(x.somn.min)} (${x.somn.status})` : (x.somn?.status || '–')]] }; }
     else if (g.file.startsWith('requests/')) return { title: 'Mesaj către antrenor', sortKey: 'zz', lines: [['Text', g.patch.text || '']] };
     else if (g.file === 'config/push.json') return { title: 'Notificări', sortKey: 'zz', lines: [['Dispozitiv', g.deleted ? 'dezactivat' : 'activat']] };
@@ -692,7 +739,7 @@ function commitMessage(ops) {
   if (days.length) parts.push(days.join(', '));
   const np = ops.filter(o => o.photo).length;
   if (np) parts.push(np === 1 ? '1 poză' : `${np} poze`);
-  const nz = ops.filter(o => o.file.startsWith('senzori/')).length;
+  const nz = new Set(ops.filter(o => o.file.startsWith('senzori/')).map(o => o.key)).size;
   if (nz) parts.push(`brățara: ${nz === 1 ? '1 zi' : nz + ' zile'}`);
   if (ops.some(o => o.file === 'favorites.json')) parts.push('favorite');
   if (ops.some(o => o.file === 'catalog.json')) parts.push('catalog');
@@ -704,7 +751,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v37';
+const APP_VERSION = 'v38';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -825,6 +872,7 @@ function cacheSave() {
   store.set('dsp-cache', { index: S.index, profile: S.profile, catalog: S.catalog, favMap: S.favMap, days: recent(S.days), plans: recent(S.plans), msgMap: recent(S.msgMap), reqMap: recent(S.reqMap), senzori: recent(S.senzori) });
 }
 function cacheLoad() {
+  S.det = store.get('dsp-det', {}) || {};
   const c = store.get('dsp-cache', null); if (!c) return false;
   Object.assign(S, { index: c.index || {}, profile: c.profile, catalog: c.catalog || {}, favMap: c.favMap || {}, days: c.days || {}, plans: c.plans || {}, msgMap: c.msgMap || {}, reqMap: c.reqMap || {}, senzori: c.senzori || {} });
   derive(); S.ready.days = true; return true;
@@ -858,7 +906,7 @@ async function pull() {
     const months = monthsBetween(addDays(t, -40), addDays(t, 14));
     if (!months.includes(S.date.slice(0, 7))) months.push(S.date.slice(0, 7));
     const old = { days: S.days, plans: S.plans, msgMap: S.msgMap, reqMap: S.reqMap, senzori: S.senzori };
-    S.days = {}; S.plans = {}; S.msgMap = {}; S.reqMap = {}; S.senzori = {}; loadedMonths.clear();
+    S.days = {}; S.plans = {}; S.msgMap = {}; S.reqMap = {}; S.senzori = {}; loadedMonths.clear(); detMonths.clear();
     try { await Promise.all(months.map(loadMonth)); }
     catch (e) { Object.assign(S, old); throw e; }
     S.profile = prof; S.catalog = cat || {}; S.favMap = fav || {}; S.index = idx || {};
@@ -900,7 +948,7 @@ Acum: ${fmtDate(t)}, ora ${pad(now.getHours())}:${pad(now.getMinutes())}.
 Răspunde în română: întâi feedback-ul pentru Mihai, scurt (3–6 rânduri). Apoi, la final, UN SINGUR bloc \`\`\`json cu exact structura de mai jos; omite cheile de care nu ai nevoie.
 {
  "messages": [{"id": "${t}-manual", "date": "${t}", "kind": "feedback", "topic": "antrenament|general", "title": "max 6 cuvinte", "body": "2–4 rânduri"}],
- "meals_est": {"AAAA-LL-ZZ": {"<id masă existent>": {"kcal": 0, "protein": 0, "fiber": 0, "items": [{"kcal": 0, "protein": 0, "fiber": 0, "src": "cantitate|meniu|poza|tipic", "found": "opțional: ce ai citit din captura de meniu"}], "note": "opțional"}}},
+ "meals_est": {"AAAA-LL-ZZ": {"<id masă existent>": {"kcal": 0, "protein": 0, "fiber": 0, "n": {"vitA": 0, "vitD": 0, "...": "toate cele 20 de chei din COACH.md, în unitățile de acolo"}, "items": [{"kcal": 0, "protein": 0, "fiber": 0, "src": "cantitate|meniu|poza|tipic", "found": "opțional: ce ai citit din captura de meniu"}], "note": "opțional"}}},
  "coach": {"AAAA-LL-ZZ": {"kcal": 0, "protein": 0, "fiber": 0, "foodNote": "1–2 propoziții"}},
  "plans": {"AAAA-LL-ZZ": {"sesiune completă, în același format ca planurile de mai jos": "..."}},
  "index": {"doar câmpurile din index.json pe care le schimbi, inclusiv altitude": "..."},
@@ -971,7 +1019,8 @@ function parseCoachAnswer(text) {
       if (!isObj(e) || !isNum(e.kcal) || !isNum(e.protein)) throw new Error('O estimare de masă nu are kcal și protein numerice.');
       const items = Array.isArray(e.items) ? e.items.map(x => isObj(x) && isNum(x.kcal) && isNum(x.protein)
         ? { kcal: Math.round(x.kcal), protein: Math.round(x.protein), ...(isNum(x.fiber) ? { fiber: Math.round(x.fiber) } : {}), ...(EST_SRC[x.src] ? { src: x.src } : {}), ...(typeof x.found === 'string' && x.found ? { found: x.found.slice(0, 300) } : {}) } : {}) : null;
-      est[id] = { kcal: Math.round(e.kcal), protein: Math.round(e.protein), ...(isNum(e.fiber) ? { fiber: Math.round(e.fiber) } : {}), ...(items ? { items } : {}), ...(typeof e.note === 'string' && e.note ? { note: e.note.slice(0, 400) } : {}) };
+      const n = isObj(e.n) ? Object.fromEntries(NUTR.filter(x => isNum(e.n[x.key]) && e.n[x.key] >= 0).map(x => [x.key, Math.round(e.n[x.key] * 100) / 100])) : null;
+      est[id] = { kcal: Math.round(e.kcal), protein: Math.round(e.protein), ...(isNum(e.fiber) ? { fiber: Math.round(e.fiber) } : {}), ...(n && Object.keys(n).length ? { n } : {}), ...(items ? { items } : {}), ...(typeof e.note === 'string' && e.note ? { note: e.note.slice(0, 400) } : {}) };
       const m = meals.find(x => x.id === id);
       preview.push([`${fmtShort(d)} · ${MEALT.find(x => x[0] === m.type)?.[1] || 'masă'}`, `~${est[id].kcal} kcal, ${est[id].protein} g proteine`]);
     });
@@ -1063,7 +1112,7 @@ let pending = false;
 const editing = () => { const a = document.activeElement; return a && $('#view').contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'checkbox'; };
 function schedule() { if (editing()) { pending = true; return; } render(); }
 let chartW = 0;
-window.addEventListener('resize', () => { if (S.tab !== 'progres') return; const w = chartWidth(); if (w !== chartW) { chartW = w; render(); } });
+window.addEventListener('resize', () => { hideTip(); if (S.tab !== 'progres') return; const w = chartWidth(); if (w !== chartW) { chartW = w; render(); } });
 document.addEventListener('focusout', () => setTimeout(() => { if (pending && !editing()) { pending = false; render(); } }, 60));
 
 let toastT;
@@ -1336,6 +1385,7 @@ async function hcReceive() {
     if (r.cod !== req.cod) throw new Error('cod');
     S.hc = r; S.hcManual = {}; store.set('dsp-hc-res', r);
     S.tab = 'azi'; S.date = today(); render();
+    const dd = Object.keys(r.detaliu || {}).sort(); if (dd.length) ensureDet(dd[0], dd[dd.length - 1]);
   } catch (e) { toast('Nu am putut citi rezultatul de la Summit Sync.'); }
 }
 function hcRestore() { const r = store.get('dsp-hc-res', null), q = store.get('dsp-hc-req', null); if (r && q && r.cod === q.cod) { S.hc = r; S.hcManual = {}; } }
@@ -1373,8 +1423,18 @@ function hcPrepared() {
   }
   return out;
 }
+// detail per hour (Summit Sync 0.13+): a day older than the live window still gets it if it has none yet
+function hcDetPrepared() {
+  return Object.entries(S.hc?.detaliu || {}).filter(([d, x]) => (!hcFinal(d) || !S.det?.[d]) && JSON.stringify(x) !== JSON.stringify(S.det?.[d] ?? null));
+}
 function hcAdd() {
-  const now = hcNow(), list = hcPrepared();
+  const now = hcNow(), list = hcPrepared(), det = hcDetPrepared();
+  for (const [d, x] of det) {
+    const file = `senzori/detaliu/${d.slice(0, 7)}.json`;
+    QUEUE = QUEUE.filter(o => !(o.file === file && o.key === d));
+    queueOp({ file, key: d, patch: x, replace: true });
+  }
+  if (det.length) detSave();
   const al = hcAlarm(); if (/^\d\d:\d\d$/.test(al)) store.set('dsp-hc-alarma', al);
   for (const [d, day] of list) {
     const file = `senzori/${d.slice(0, 7)}.json`;
@@ -1382,7 +1442,7 @@ function hcAdd() {
     queueOp({ file, key: d, patch: { ...day, importat: now }, replace: true });
   }
   hcClear(); render();
-  toast(list.length ? `Am pus în notițe ${list.length === 1 ? 'o zi' : list.length + ' zile'} de la brățară.` : 'Nimic nou de la brățară.');
+  toast(list.length ? `Am pus în notițe ${list.length === 1 ? 'o zi' : list.length + ' zile'} de la brățară${det.length ? ', cu detaliile pe ore' : ''}.` : det.length ? `Am pus în notițe detaliile pe ore (${det.length === 1 ? 'o zi' : det.length + ' zile'}).` : 'Nimic nou de la brățară.');
 }
 function hcStatusOf(day) { return day ? (day.status === 'nepurtat' && day.somn?.status === 'manual' ? 'manual' : day.status) : null; }
 function hcStrip() {
@@ -1438,7 +1498,7 @@ function hcCardHTML() {
     const changed = new Set(prep.map(x => x[0]));
     const days = Object.entries(r.zile || {}).sort((a, b) => b[0].localeCompare(a[0]));
     h += `<ul class="hc-days">${days.map(([d, day]) => hcDayRow(d, pm[d] || day, changed.has(d))).join('')}</ul>
-      <div class="row"><button class="btn primary" data-act="hc-add">${changed.size ? `Adaugă în notițe (${changed.size === 1 ? 'o zi' : changed.size + ' zile'})` : 'Nimic nou · închide'}</button><button class="btn sm" data-act="hc-drop">Renunță</button></div>`;
+      <div class="row"><button class="btn primary" data-act="hc-add">${changed.size ? `Adaugă în notițe (${changed.size === 1 ? 'o zi' : changed.size + ' zile'})` : hcDetPrepared().length ? 'Adaugă detaliile pe ore' : 'Nimic nou · închide'}</button><button class="btn sm" data-act="hc-drop">Renunță</button></div>`;
   } else h += `<div class="row"><button class="btn sm" data-act="hc-drop">Renunță</button></div>`;
   return h + '</section>';
 }
@@ -2151,78 +2211,387 @@ async function syncPush() {
 
 /* ---------- progress ---------- */
 // The SVG is drawn at the width it is shown at, so 12px of text is 12px on screen (on a phone the old fixed 640 was halved)
-function chartWidth() {
+function chartWidth(full) {
   const v = $('#view'), cs = getComputedStyle(v);
   let w = v.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-  if (matchMedia('(min-width: 1000px)').matches) w = (w - 22) / 2;
+  if (!full && matchMedia('(min-width: 1000px)').matches) w = (w - 22) / 2;
   return Math.max(260, Math.round(w - 32));
 }
+// round an axis to a 1/2/5 step so grid lines land on readable values
+function niceAxis(lo, hi, fixLo, fixHi, steps) {
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const pv = (hi - lo) * 0.08; if (!fixLo) lo -= pv; if (!fixHi) hi += pv;
+  const raw = (hi - lo) / 4, mag = 10 ** Math.floor(Math.log10(raw)), tick = steps ? steps.find(s => s >= raw) || steps[steps.length - 1] : [1, 2, 5, 10].map(m => m * mag).find(s => s >= raw);
+  if (!fixLo) lo = Math.floor(lo / tick) * tick; if (!fixHi) hi = Math.ceil(hi / tick) * tick;
+  return { lo, hi, tick };
+}
+const hitTip = (x, w, T, h, tip, date) => tip ? `<rect class="hit" x="${x.toFixed(1)}" y="${T}" width="${Math.max(1, w).toFixed(1)}" height="${h}" data-tip="${esc(tip)}"${date ? ` data-date="${date}"` : ''}/>` : '';
+/* Charts over days. series: bars | dots | line | stack {parts: [{values, cls}]} | span {values: [[a, b]]}.
+   tips: one text per day (tap shows it; a second tap on the same day opens it when goto is set). */
 function svgChart(o) {
-  const W = chartWidth(), H = o.h || 190, L = 46, R = 18, T = 16, B = 26;
+  const W = chartWidth(o.full), H = o.h || 190, L = 46, R = 18, T = 16, B = 26;
   const n = o.dates.length;
-  let vals = o.series.flatMap(s => s.values.filter(v => v != null));
+  let vals = [];
+  o.series.forEach(s => {
+    if (s.type === 'stack') o.dates.forEach((_, i) => { if (s.parts.some(p => p.values[i] != null)) vals.push(s.parts.reduce((a, p) => a + (p.values[i] || 0), 0)); });
+    else if (s.type === 'span') s.values.forEach(v => { if (v) vals.push(v[0], v[1]); });
+    else vals.push(...s.values.filter(v => v != null));
+  });
   if (!vals.length) return `<p class="empty">Nu sunt date încă în intervalul ales.</p>`;
   if (o.band) vals = vals.concat(o.band);
-  let lo = o.yMin ?? Math.min(...vals), hi = o.yMax ?? Math.max(...vals);
-  if (lo === hi) { lo -= 1; hi += 1; }
-  const pv = (hi - lo) * 0.08; if (o.yMin == null) lo -= pv; if (o.yMax == null) hi += pv;
-  // round axis to a 1/2/5 step so grid lines land on readable values
-  const raw = (hi - lo) / 4, mag = 10 ** Math.floor(Math.log10(raw)), tick = [1, 2, 5, 10].map(m => m * mag).find(s => s >= raw);
-  if (o.yMin == null) lo = Math.floor(lo / tick) * tick; if (o.yMax == null) hi = Math.ceil(hi / tick) * tick;
-  const xc = i => L + (i + 0.5) * (W - L - R) / n;
-  const y = v => T + (hi - v) * (H - T - B) / (hi - lo);
+  (o.refs || []).forEach(r => vals.push(r[0]));
+  const { lo, hi, tick } = niceAxis(o.yMin ?? Math.min(...vals), o.yMax ?? Math.max(...vals), o.yMin != null, o.yMax != null, o.steps);
+  const cw = (W - L - R) / n, xc = i => L + (i + 0.5) * cw;
+  const y = v => o.invert ? T + (v - lo) * (H - T - B) / (hi - lo) : T + (hi - v) * (H - T - B) / (hi - lo);
+  const fy = o.fmtY || (v => fmtN(v, o.dec ?? 0));
   let g = '';
-  for (let k = 0, nt = Math.round((hi - lo) / tick); k <= nt; k++) { const v = lo + tick * k; g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fmtN(v, o.dec ?? 0)}</text>`; }
-  if (o.band) g += `<rect class="band" x="${L}" width="${W - L - R}" y="${y(o.band[1])}" height="${Math.max(1, y(o.band[0]) - y(o.band[1]))}"/>`;
-  // date labels about 75px apart, counted back from today so the newest day is always labelled
+  for (let k = 0, nt = Math.round((hi - lo) / tick); k <= nt; k++) { const v = lo + tick * k; g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fy(v)}</text>`; }
+  if (o.band) { const a = y(o.band[0]), b = y(o.band[1]); g += `<rect class="band" x="${L}" width="${W - L - R}" y="${Math.min(a, b)}" height="${Math.max(1, Math.abs(a - b))}"/>`; }
+  (o.refs || []).forEach(([v, t]) => { g += `<line class="ref" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>${t ? `<text class="ref-t" x="${W - R - 2}" y="${y(v) - 4}" text-anchor="end">${esc(t)}</text>` : ''}`; });
+  // date labels about 75px apart, counted back from the newest so it is always labelled
   const step = Math.max(1, Math.ceil(n / Math.max(2, Math.floor((W - L - R) / 75))));
-  for (let i = n - 1; i >= 0; i -= step) g += `<text x="${xc(i)}" y="${H - 8}" text-anchor="middle">${fmtShort(o.dates[i])}</text>`;
-  const bw = Math.max(2, (W - L - R) / n * 0.62);
+  for (let i = n - 1; i >= 0; i -= step) g += `<text x="${xc(i)}" y="${H - 8}" text-anchor="middle">${(o.xLabel || fmtShort)(o.dates[i])}</text>`;
+  const bw = Math.max(2, cw * 0.62), base = y(Math.max(lo, 0));
   o.series.forEach(s => {
-    if (s.type === 'bars') s.values.forEach((v, i) => { if (v != null) g += `<rect class="${s.cls || 'bar'}" x="${xc(i) - bw / 2}" width="${bw}" y="${y(v)}" height="${Math.max(0, y(Math.max(lo, 0)) - y(v))}" rx="1.5"/>`; });
+    if (s.type === 'bars') s.values.forEach((v, i) => { if (v != null) g += `<rect class="${s.cls || 'bar'}" x="${xc(i) - bw / 2}" width="${bw}" y="${Math.min(y(v), base)}" height="${Math.abs(base - y(v))}" rx="1.5"/>`; });
+    if (s.type === 'stack') o.dates.forEach((_, i) => { let acc = 0; s.parts.forEach(p => { const v = p.values[i] || 0; if (v > 0) { g += `<rect class="${p.cls}" x="${xc(i) - bw / 2}" width="${bw}" y="${y(acc + v)}" height="${Math.max(0, y(acc) - y(acc + v))}"/>`; acc += v; } }); });
+    if (s.type === 'span') s.values.forEach((v, i) => { if (v) { const a = y(v[0]), b = y(v[1]); g += `<rect class="${s.cls || 'span'}" x="${xc(i) - bw / 2}" width="${bw}" y="${Math.min(a, b)}" height="${Math.max(2, Math.abs(a - b))}" rx="3"/>`; } });
     if (s.type === 'dots') s.values.forEach((v, i) => { if (v != null) g += `<circle class="${s.clsFn ? s.clsFn(v, i) : (s.cls || 'dot')}" cx="${xc(i)}" cy="${y(v)}" r="${s.r || 3.5}"/>`; });
     if (s.type === 'line') { let d = '', pen = false; s.values.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${xc(i).toFixed(1)},${y(v).toFixed(1)}`; pen = true; }); g += `<path class="${s.cls || 'line'}" d="${d}"/>`;
       const i = s.values.findLastIndex(v => v != null);
       if (s.last && i >= 0) { const v = s.values[i], ty = y(v) - 10 < T + 4 ? y(v) + 20 : y(v) - 10;
-        g += `<circle class="last-dot" cx="${xc(i)}" cy="${y(v)}" r="5"/><text class="last" x="${xc(i) + 4}" y="${ty}" text-anchor="end">${fmtN(v, o.dec ?? 0)}</text>`; } }
+        g += `<circle class="last-dot" cx="${xc(i)}" cy="${y(v)}" r="5"/><text class="last" x="${xc(i) + 4}" y="${ty}" text-anchor="end">${fy(v)}</text>`; } }
   });
+  if (o.tips) o.dates.forEach((dt, i) => { g += hitTip(L + i * cw, cw, T, H - T - B, typeof o.tips === 'function' ? o.tips(i) : o.tips[i], o.goto ? dt : null); });
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label || 'grafic')}">${g}</svg>`;
 }
+/* Charts over one day: x in minutes from 00:00 (negative = the evening before).
+   layers: shade {spans: [[a, b, cls]]} | band {pts: [[m, lo, hi]], w} | line {pts: [[m, v]], gap} | dots {pts} | bars {pts: [[a, b, v]]}
+   | rows {segs: [[a, b, row, cls]]} with rowLabels; hits: [[a, b, text]]. */
+const hhmm = m => { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`; };
+const toMin = s => /^\d\d:\d\d/.test(s || '') ? +s.slice(0, 2) * 60 + +s.slice(3, 5) : null;
+function timeChart(o) {
+  const W = chartWidth(o.full !== false), H = o.h || 170, L = o.rowLabels ? 62 : 46, R = 14, T = 12, B = 24;
+  const x = m => L + (Math.min(o.x1, Math.max(o.x0, m)) - o.x0) * (W - L - R) / (o.x1 - o.x0);
+  let lo = 0, hi = 1, tick = 1;
+  if (!o.rowLabels) {
+    const vals = [];
+    o.layers.forEach(l => { if (l.type === 'band') l.pts.forEach(p => vals.push(p[1], p[2])); if (l.type === 'line' || l.type === 'dots') l.pts.forEach(p => vals.push(p[1])); if (l.type === 'bars') l.pts.forEach(p => vals.push(p[2])); });
+    if (!vals.length) return `<p class="empty">Fără date.</p>`;
+    ({ lo, hi, tick } = niceAxis(o.yMin ?? Math.min(...vals), o.yMax ?? Math.max(...vals), o.yMin != null, o.yMax != null));
+  }
+  const y = v => T + (hi - v) * (H - T - B) / (hi - lo);
+  let g = '';
+  if (o.rowLabels) { const rh = (H - T - B) / o.rowLabels.length; o.rowLabels.forEach((t, i) => { g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${T + (i + 1) * rh}" y2="${T + (i + 1) * rh}"/><text x="${L - 6}" y="${T + i * rh + rh / 2 + 4}" text-anchor="end">${esc(t)}</text>`; }); }
+  else for (let k = 0, nt = Math.round((hi - lo) / tick); k <= nt; k++) { const v = lo + tick * k; g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fmtN(v, 0)}</text>`; }
+  const pxM = (W - L - R) / (o.x1 - o.x0), sm = [10, 15, 30, 60, 120, 180, 240, 360, 720].find(k => k * pxM >= 46) || 720;
+  for (let m = Math.ceil(o.x0 / sm) * sm; m <= o.x1; m += sm) g += `<text x="${x(m)}" y="${H - 7}" text-anchor="middle">${hhmm(m).replace(/^0(\d)/, '$1')}</text>`;
+  for (const l of o.layers) {
+    if (l.type === 'shade') l.spans.forEach(([a, b, c]) => { g += `<rect class="${c || 'shade'}" x="${x(a)}" y="${T}" width="${Math.max(1, x(b) - x(a))}" height="${H - T - B}"/>`; });
+    if (l.type === 'band') l.pts.forEach(([m, a, b]) => { g += `<rect class="${l.cls || 'hr-band'}" x="${x(m)}" y="${y(b)}" width="${Math.max(1, x(m + (l.w || 5)) - x(m))}" height="${Math.max(1, y(a) - y(b))}"/>`; });
+    if (l.type === 'bars') { const base = y(Math.max(lo, 0)); l.pts.forEach(([a, b, v]) => { if (v) g += `<rect class="${l.cls || 'bar'}" x="${x(a) + 1}" y="${y(v)}" width="${Math.max(1, x(b) - x(a) - 2)}" height="${Math.max(0, base - y(v))}" rx="1.5"/>`; }); }
+    if (l.type === 'rows') { const rh = (H - T - B) / o.rowLabels.length; l.segs.forEach(([a, b, r, c]) => { g += `<rect class="${c}" x="${x(a)}" y="${T + r * rh + 2}" width="${Math.max(1, x(b) - x(a))}" height="${rh - 4}" rx="2"/>`; }); }
+    if (l.type === 'line') { let d = '', prev = null; l.pts.forEach(([m, v]) => { d += `${prev != null && m - prev <= (l.gap || 15) ? 'L' : 'M'}${x(m).toFixed(1)},${y(v).toFixed(1)}`; prev = m; }); g += `<path class="${l.cls || 'line'}" d="${d}"/>`; }
+    if (l.type === 'dots') l.pts.forEach(([m, v]) => { g += `<circle class="${l.cls || 'dot'}" cx="${x(m)}" cy="${y(v)}" r="${l.r || 3}"/>`; });
+  }
+  if (o.now != null && o.now > o.x0 && o.now < o.x1) g += `<line class="now" x1="${x(o.now)}" x2="${x(o.now)}" y1="${T}" y2="${H - B}"/>`;
+  (o.hits || []).forEach(([a, b, t]) => { g += hitTip(x(a), x(b) - x(a), T, H - T - B, t); });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label || 'grafic')}">${g}</svg>`;
+}
+
+/* data of a day, from what he notes and from the band (senzori/, detail in senzori/detaliu/) */
+const SZ = d => S.senzori?.[d] || null;
+function daySteps(d) {
+  if (S.days[d]?.steps != null) return S.days[d].steps;
+  const z = SZ(d); return z && z.status !== 'nepurtat' ? z.pasi?.total ?? null : null;
+}
+const sleepOf = d => { const s = SZ(d)?.somn; return s && (s.status === 'ok' || s.status === 'manual') ? s : null; };
+function sleepMin(d) { const s = sleepOf(d); if (s?.min != null) return s.min; const h = S.days[d]?.sleepHours; return h != null ? Math.round(h * 60) : null; }
+const restHR = d => SZ(d)?.puls?.repaus ?? null;
+const DONE = { complet: ['Complet', 'w-c'], partial: ['Parțial', 'w-p'], minim: ['Varianta minimă', 'w-m'], sarit: ['Sărit', 'w-s'] };
+// a class or a hike without a gym log still counts as a complete session
+function doneOf(day) { const c = day?.log?.completed; if (c) return c; if (day?.classLog?.minutes || day?.outdoor?.minutes || day?.outdoor?.km) return 'complet'; return null; }
+const SLEEP_PH = [['profund', 'Profund', 'p'], ['rem', 'REM', 'r'], ['usor', 'Ușor', 'u'], ['treaz', 'Treaz', 't']];
+const ZONES = [['usor', 'ușor', 'u'], ['moderat', 'moderat', 'm'], ['intens', 'intens', 'i']];
+const bedH = s => { const m = toMin(s); return m == null ? null : (m < 720 ? m + 1440 : m) / 60; };   // culcare: seara = 18–24, după miezul nopții = 24+
+const fmtClockH = v => hhmm(Math.round(v * 60));
+const avgOf = arr => { const v = arr.filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+
+/* detail of the band, one file a month; loaded only when the progress tab needs it, the last 14 days kept on the device */
+const detMonths = new Set();
+async function ensureDet(from, to) {
+  const need = monthsBetween(from, to).filter(m => !detMonths.has(m));
+  if (!need.length || !GH.token) return;
+  need.forEach(m => detMonths.add(m));
+  try {
+    const res = await Promise.all(need.map(m => loadJson(`senzori/detaliu/${m}.json`)));
+    res.forEach(x => Object.assign(S.det, x || {}));
+    QUEUE.forEach(op => { if (op.file.startsWith('senzori/detaliu/')) applyLocal(op); });
+    detSave();
+  } catch (e) { need.forEach(m => detMonths.delete(m)); return; }
+  schedule();
+}
+function detSave() { const from = addDays(today(), -14); store.set('dsp-det', Object.fromEntries(Object.entries(S.det).filter(([d]) => d >= from))); }
+
+/* vitamins and minerals: same keys and units as in Farfuria mea (mama/app NUTR), estimated by the coach in meals[].est.n.
+   Target = the reference intake for a man of 31–50 years (DRI); VNR = the EU label value, shown for comparison.
+   The coach may override a target in profile.targets.nutrients. */
+const NUTR = [
+  ['vitA', 'Vitamina A', 'µg', 900, 800, 'vit'], ['vitD', 'Vitamina D', 'µg', 15, 5, 'vit'], ['vitE', 'Vitamina E', 'mg', 15, 12, 'vit'], ['vitK', 'Vitamina K', 'µg', 120, 75, 'vit'],
+  ['vitC', 'Vitamina C', 'mg', 90, 80, 'vit'], ['b1', 'B1 (tiamină)', 'mg', 1.2, 1.1, 'vit'], ['b2', 'B2 (riboflavină)', 'mg', 1.3, 1.4, 'vit'], ['b3', 'B3 (niacină)', 'mg', 16, 16, 'vit'],
+  ['b5', 'B5 (acid pantotenic)', 'mg', 5, 6, 'vit'], ['b6', 'Vitamina B6', 'mg', 1.3, 1.4, 'vit'], ['b7', 'B7 (biotină)', 'µg', 30, 50, 'vit'], ['b9', 'B9 (folat)', 'µg', 400, 200, 'vit'],
+  ['b12', 'Vitamina B12', 'µg', 2.4, 2.5, 'vit'],
+  ['ca', 'Calciu', 'mg', 1000, 800, 'min'], ['fe', 'Fier', 'mg', 8, 14, 'min'], ['mg', 'Magneziu', 'mg', 420, 375, 'min'], ['zn', 'Zinc', 'mg', 11, 10, 'min'],
+  ['k', 'Potasiu', 'mg', 3400, 2000, 'min'], ['se', 'Seleniu', 'µg', 55, 55, 'min'], ['iod', 'Iod', 'µg', 150, 150, 'min']
+].map(([key, name, unit, ref, vnr, group]) => ({ key, name, unit, ref, vnr, group }));
+const NK = Object.fromEntries(NUTR.map(n => [n.key, n]));
+const nTarget = k => S.profile?.targets?.nutrients?.[k] ?? NK[k].ref;
+const pctOf = (k, v) => v == null ? null : v / nTarget(k) * 100;
+// below 50% of the target = deficit, 50–80% = under target, from 80% = fine
+const STATUS = { ok: ['✓', 'Bine'], warn: ['!', 'Sub țintă'], bad: ['▼', 'Deficit'] };
+const statusOf = pct => pct == null ? null : pct < 50 ? 'bad' : pct < 80 ? 'warn' : 'ok';
+const stHTML = s => s ? `<span class="st ${s}">${STATUS[s][0]} ${STATUS[s][1]}</span>` : '';
+// totals of a day: complete = every meal has its estimate with nutrients (only those count in averages and charts)
+function dayNutr(day) {
+  const ms = day?.meals || [], withN = ms.filter(m => m.est?.n);
+  if (!withN.length) return null;
+  const n = {}; NUTR.forEach(({ key }) => { if (withN.some(m => m.est.n[key] != null)) n[key] = withN.reduce((s, m) => s + (m.est.n[key] || 0), 0); });
+  return { n, complete: withN.length === ms.length };
+}
+function nutrAvg(dates) {
+  const tots = dates.map(d => dayNutr(S.days[d])).filter(t => t?.complete);
+  const n = {}; NUTR.forEach(({ key }) => { const v = avgOf(tots.map(t => t.n[key] ?? null)); if (v != null) n[key] = v; });
+  return { n, days: tots.length };
+}
+function nutrRows(values, { colored } = {}) {
+  let h = '<div class="nlist">', grp = '';
+  NUTR.forEach(n => {
+    if (n.group !== grp) { grp = n.group; h += `<div class="ngroup">${grp === 'vit' ? 'Vitamine' : 'Minerale'}</div>`; }
+    const v = values[n.key], pct = pctOf(n.key, v), s = colored ? statusOf(pct) : null, w = pct == null ? 0 : Math.min(100, pct / 1.5);
+    h += `<button class="nrow ${s || ''}" data-act="nutr" data-k="${n.key}" aria-label="${esc(n.name)}: ${pct == null ? 'fără date' : fmtN(pct, 0) + '%'}">
+      <span class="nm">${esc(n.name)} <small>${v == null ? '' : `${fmtN(v, v < 10 ? 1 : 0)} din ${fmtN(nTarget(n.key), 1)} ${n.unit}`}</small></span>
+      <span class="pc">${pct == null ? '–' : fmtN(pct, 0) + '%'} ${stHTML(s)}</span>
+      <span class="track"><span style="width:${w}%"></span><i style="left:${100 / 1.5}%" title="100% din țintă"></i></span></button>`;
+  });
+  return h + '</div>';
+}
+
 function viewProgress() {
+  const seg = `<div class="seg" role="group" aria-label="Vedere"><button data-act="pview" data-v="general" aria-pressed="${S.pv !== 'zi'}">General</button><button data-act="pview" data-v="zi" aria-pressed="${S.pv === 'zi'}">Zi</button></div>`;
+  return seg + (S.pv === 'zi' ? viewPDay() : viewPGeneral());
+}
+
+function viewPGeneral() {
   const t = today();
   const all = Object.keys(S.days).sort();
   const first = all[0] || t;
   const span = Math.max(7, Math.min(S.range || Infinity, daysBetween(first, t) + 1));
   const dates = []; for (let i = span - 1; i >= 0; i--) dates.push(addDays(t, -i));
+  ensureDet(dates[0], t);
   const D = d => S.days[d] || {};
+  const last7 = []; for (let i = 6; i >= 0; i--) last7.push(addDays(t, -i));
+  const tg = S.profile?.targets || {};
+  const goto = { goto: true };
+  // body and food
   const w = dates.map(d => D(d).weight ?? null);
   const wAvg = rolling(dates, d => D(d).weight ?? null, 7, 3);
-  const steps = dates.map(d => D(d).steps ?? null);
   const kcal = dates.map(d => dayKcal(D(d)));
   const kTg = dates.map(d => d <= t && d >= (S.profile?.startDate || '') ? kcalTarget(d).kcal : null);
+  const prot = dates.map(d => dayProtein(D(d))), fib = dates.map(d => dayFiber(D(d)));
+  // movement
+  const steps = dates.map(daySteps);
+  const stAvg = rolling(dates, daySteps, 7, 3);
   const pain = dates.map(d => maxPain(D(d)));
-  const last7 = []; for (let i = 0; i < 7; i++) last7.push(addDays(t, -i));
-  const avg = arr => { const v = arr.filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const feel = dates.map(d => D(d).log?.feel ?? null);
+  // sleep and heart
+  const sl = dates.map(sleepOf);
+  const ph = SLEEP_PH.map(([k]) => dates.map((d, i) => sl[i]?.[k] != null ? sl[i][k] / 60 : null));
+  const slH = dates.map(d => { const m = sleepMin(d); return m == null ? null : m / 60; });
+  const onlyTotal = dates.map((d, i) => sl[i]?.profund == null && slH[i] != null ? slH[i] : null);   // manual / sleepHours: no phases
+  const bed = dates.map((d, i) => sl[i]?.culcare && sl[i]?.ridicare ? [bedH(sl[i].culcare), (toMin(sl[i].ridicare) + 1440) / 60] : null);
+  const rhr = dates.map(restHR), rhrAvg = rolling(dates, restHR, 7, 3);
+  const o2 = dates.map(d => { const p = S.det?.[d]?.spo2; if (!p?.length) return null; const s = sleepSpan(d); const night = s ? p.filter(([m]) => m >= s[0] && m <= s[1]) : []; const use = night.length ? night : p; return [avgOf(use.map(x => x[1])), Math.min(...use.map(x => x[1]))]; });
+  // workouts per week (Monday–Sunday)
+  const weeks = []; for (let m = mondayOf(dates[0]); m <= t; m = addDays(m, 7)) weeks.push(m);
+  const wk = weeks.map(m => { const c = { complet: 0, partial: 0, minim: 0, sarit: 0, plan: 0, u: 0, m: 0, i: 0 };
+    for (let i = 0; i < 7; i++) { const d = addDays(m, i); if (d > t) break; const k = doneOf(S.days[d]); if (k) c[k]++; if (S.plans[d]?.blocks?.length) c.plan++;
+      (SZ(d)?.antrenamente || []).forEach(a => { c.u += a.zone?.usor || 0; c.m += a.zone?.moderat || 0; c.i += a.zone?.intens || 0; }); }
+    return c; });
   const curAvg = rolling([t], d => D(d).weight ?? null)[0];
   const start = S.profile?.startWeight;
-  const workouts = last7.filter(d => ['complet', 'partial', 'minim'].includes(D(d).log?.completed)).length;
-  const tg = S.profile?.targets || {};
-  const rng = [[30, '30 zile'], [90, '90 zile'], [0, 'Tot']];
-  return `<div class="chips">${rng.map(([v, n]) => `<button class="chip" data-act="range" data-v="${v}" aria-pressed="${S.range === v}">${n}</button>`).join('')}</div>
-  <div class="tiles">
+  const workouts = last7.filter(d => ['complet', 'partial', 'minim'].includes(doneOf(D(d)))).length;
+  const rng = [[7, '7 zile'], [30, '30 zile'], [90, '90 zile'], [0, 'Tot']];
+  const tipDay = (i, s) => `${fmtShort(dates[i])}: ${s}`;
+  let h = `<div class="chips">${rng.map(([v, n]) => `<button class="chip" data-act="range" data-v="${v}" aria-pressed="${S.range === v}">${n}</button>`).join('')}</div>
+  <div class="tiles six">
     <div class="tile"><span class="eyebrow">Greutate, medie 7 zile</span><span class="v">${fmtN(curAvg)} kg</span><span class="muted small">${start && curAvg ? `${curAvg - start <= 0 ? '−' : '+'}${fmtN(Math.abs(curAvg - start))} kg de la start (${fmtN(start)})` : 'cântărește-te dimineața'}</span></div>
-    <div class="tile" style="--tile:var(--warn)"><span class="eyebrow">Calorii, medie 7 zile</span><span class="v">${fmtN(avg(last7.map(d => dayKcal(D(d)))), 0)}</span><span class="muted small">ținta medie ${fmtN(avg(last7.map(d => kTg[dates.indexOf(d)] ?? null)), 0)}</span></div>
-    <div class="tile" style="--tile:var(--ice)"><span class="eyebrow">Pași, medie 7 zile</span><span class="v">${fmtN(avg(last7.map(d => D(d).steps ?? null)), 0)}</span><span class="muted small">${tg.steps ? `ținta ${fmtN(tg.steps, 0)}` : 'săptămâna de măsurare'}</span></div>
+    <div class="tile" style="--tile:var(--warn)"><span class="eyebrow">Calorii, medie 7 zile</span><span class="v">${fmtN(avgOf(last7.map(d => dayKcal(D(d)))), 0)}</span><span class="muted small">ținta medie ${fmtN(avgOf(last7.map(d => kTg[dates.indexOf(d)] ?? null)), 0)}</span></div>
+    <div class="tile" style="--tile:var(--ice)"><span class="eyebrow">Pași, medie 7 zile</span><span class="v">${fmtN(avgOf(last7.map(daySteps)), 0)}</span><span class="muted small">${tg.steps ? `ținta ${fmtN(tg.steps, 0)}` : 'săptămâna de măsurare'}</span></div>
     <div class="tile" style="--tile:var(--ok)"><span class="eyebrow">Antrenamente, 7 zile</span><span class="v">${workouts}</span><span class="muted small">inclusiv varianta minimă</span></div>
+    <div class="tile" style="--tile:var(--s-deep)"><span class="eyebrow">Somn, medie 7 nopți</span><span class="v">${hcDur(avgOf(last7.map(sleepMin)) == null ? null : Math.round(avgOf(last7.map(sleepMin))))}</span><span class="muted small">${(() => { const sc = avgOf(last7.map(d => sleepOf(d)?.scor ?? null)); return sc != null ? `scor mediu ${fmtN(sc, 0)}` : 'de la brățară'; })()}</span></div>
+    <div class="tile" style="--tile:var(--bad)"><span class="eyebrow">Puls în repaus, 7 zile</span><span class="v">${fmtN(avgOf(last7.map(restHR)), 0)}</span><span class="muted small">bătăi pe minut</span></div>
   </div>
-  <div class="charts"><section class="card"><h2>Greutate</h2><div class="legend"><span><i style="background:var(--muted);border-radius:50%"></i>cântărire</span><span><i style="background:var(--accent)"></i>medie 7 zile</span></div>
-    ${svgChart({ dates, label: 'Greutate', dec: 1, series: [{ type: 'dots', values: w, r: 3 }, { type: 'line', values: wAvg, last: true }] })}</section>
+  <p class="muted small">Atinge o zi pe orice grafic ca să vezi valorile; atinge-o încă o dată ca s-o deschizi în vederea Zi.</p>
+  <div class="charts">
+  <section class="card"><h2>Greutate</h2><div class="legend"><span><i style="background:var(--muted);border-radius:50%"></i>cântărire</span><span><i style="background:var(--accent)"></i>medie 7 zile</span></div>
+    ${svgChart({ dates, label: 'Greutate', dec: 1, series: [{ type: 'dots', values: w, r: 3 }, { type: 'line', values: wAvg, last: true }], ...goto, tips: i => w[i] != null || wAvg[i] != null ? tipDay(i, `${w[i] != null ? fmtN(w[i]) + ' kg' : 'fără cântărire'}${wAvg[i] != null ? ` · media ${fmtN(wAvg[i])}` : ''}`) : null })}</section>
   <section class="card"><h2>Calorii estimate</h2><div class="legend"><span><i style="background:var(--accent)"></i>kcal pe zi</span><span><i style="background:var(--fg)"></i>ținta zilei</span></div>
-    ${svgChart({ dates, label: 'Calorii', yMin: 0, series: [{ type: 'bars', values: kcal }, { type: 'line', values: kTg, cls: 'line target' }] })}</section>
-  <section class="card"><h2>Pași</h2>${svgChart({ dates, label: 'Pași', yMin: 0, series: [{ type: 'bars', values: steps, cls: 'bar-ice' }] })}</section>
+    ${svgChart({ dates, label: 'Calorii', yMin: 0, series: [{ type: 'bars', values: kcal }, { type: 'line', values: kTg, cls: 'line target' }], ...goto, tips: i => kcal[i] != null ? tipDay(i, `${fmtN(kcal[i], 0)} kcal${kTg[i] ? ` din ${fmtN(kTg[i], 0)}` : ''}`) : null })}</section>
+  <section class="card"><h2>Proteine</h2><div class="legend"><span><i style="background:var(--ice)"></i>g pe zi</span><span><i style="background:var(--ok);opacity:.4"></i>ținta ${fmtN(tg.protein?.[0], 0)}–${fmtN(tg.protein?.[1], 0)} g</span></div>
+    ${svgChart({ dates, label: 'Proteine', yMin: 0, band: tg.protein, series: [{ type: 'bars', values: prot, cls: 'bar-ice' }], ...goto, tips: i => prot[i] != null ? tipDay(i, `${fmtN(prot[i], 0)} g proteine · ${fmtN(fib[i], 0)} g fibre`) : null })}</section>
+  <section class="card"><h2>Fibre</h2><div class="legend"><span><i style="background:var(--ok)"></i>g pe zi</span><span><i style="background:var(--ok);opacity:.4"></i>ținta ${fmtN(tg.fiber?.[0] || 30, 0)}–${fmtN(tg.fiber?.[1] || 40, 0)} g</span></div>
+    ${svgChart({ dates, label: 'Fibre', yMin: 0, h: 150, band: [tg.fiber?.[0] || 30, tg.fiber?.[1] || 40], series: [{ type: 'bars', values: fib, cls: 'w-c' }], ...goto, tips: i => fib[i] != null ? tipDay(i, `${fmtN(fib[i], 0)} g fibre`) : null })}</section>
+  <section class="card"><h2>Somn</h2><div class="legend">${SLEEP_PH.map(([, n, c]) => `<span><i class="lg-${c}"></i>${n}</span>`).join('')}<span><i style="background:var(--muted)"></i>fără faze</span></div>
+    ${svgChart({ dates, label: 'Somn pe nopți (ore)', yMin: 0, refs: [[7, '7 h']], series: [{ type: 'stack', parts: [...SLEEP_PH.map(([, , c], k) => ({ values: ph[k], cls: 's-' + c })), { values: onlyTotal, cls: 'dot' }] }], ...goto,
+      tips: i => slH[i] == null ? null : tipDay(i, `${hcDur(Math.round(slH[i] * 60))}${sl[i]?.culcare ? ` · ${sl[i].culcare}–${sl[i].ridicare}` : ''}${sl[i]?.profund != null ? `\nprofund ${hcDur(sl[i].profund)} · REM ${hcDur(sl[i].rem)} · ușor ${hcDur(sl[i].usor)}` : ''}${sl[i]?.scor != null ? ` · scor ${sl[i].scor}` : ''}`) })}
+    <p class="muted small">Noaptea e trecută pe ziua în care te-ai trezit.</p></section>
+  <section class="card"><h2>Ora de culcare și de trezire</h2>
+    ${svgChart({ dates, label: 'Culcare și trezire', invert: true, steps: [1, 2, 3, 4, 6], fmtY: fmtClockH, series: [{ type: 'span', values: bed }], ...goto, tips: i => bed[i] ? tipDay(i, `culcare ${sl[i].culcare} · trezire ${sl[i].ridicare}${sl[i].snoozeMin ? ` · snooze ${sl[i].snoozeMin}′` : ''}`) : null })}
+    <p class="muted small">Cu cât barele sunt mai aliniate, cu atât programul e mai regulat.</p></section>
+  <section class="card"><h2>Puls în repaus</h2><div class="legend"><span><i style="background:var(--muted);border-radius:50%"></i>pe zi</span><span><i style="background:var(--bad)"></i>medie 7 zile</span></div>
+    ${svgChart({ dates, label: 'Puls în repaus', series: [{ type: 'dots', values: rhr, r: 3 }, { type: 'line', values: rhrAvg, cls: 'line hr', last: true }], ...goto, tips: i => rhr[i] != null ? tipDay(i, `repaus ${rhr[i]} bpm${SZ(dates[i])?.puls?.maxim ? ` · maxim ${SZ(dates[i]).puls.maxim}` : ''}`) : null })}
+    <p class="muted small">Scade încet când condiția fizică crește; o zi cu 5+ bătăi peste medie = oboseală, somn slab sau început de răceală.</p></section>
+  <section class="card"><h2>SpO2 noaptea</h2><div class="legend"><span><i style="background:var(--c-out)"></i>medie</span><span><i style="background:var(--muted);border-radius:50%"></i>minim</span></div>
+    ${svgChart({ dates, label: 'SpO2', yMax: 100, series: [{ type: 'line', values: o2.map(x => x?.[0] ?? null), cls: 'line o2', last: true }, { type: 'dots', values: o2.map(x => x?.[1] ?? null), r: 3 }], ...goto, tips: i => o2[i] ? tipDay(i, `SpO2 mediu ${fmtN(o2[i][0], 0)}% · minim ${o2[i][1]}%`) : null })}
+    <p class="muted small">Din valorile de la brățară (Summit Sync 0.13+). Sub 90% des, noapte de noapte = de întrebat medicul.</p></section>
+  <section class="card"><h2>Pași</h2><div class="legend"><span><i style="background:var(--ice)"></i>pe zi</span><span><i style="background:var(--accent)"></i>medie 7 zile</span></div>
+    ${svgChart({ dates, label: 'Pași', yMin: 0, refs: tg.steps ? [[tg.steps, 'țintă']] : [], series: [{ type: 'bars', values: steps, cls: 'bar-ice' }, { type: 'line', values: stAvg }], ...goto, tips: i => steps[i] != null ? tipDay(i, `${steps[i].toLocaleString('ro-RO')} pași`) : null })}</section>
+  <section class="card"><h2>Antrenamente pe săptămâni</h2><div class="legend">${Object.values(DONE).map(([n, c]) => `<span><i style="background:var(--${{ 'w-c': 'ok', 'w-p': 'c-out', 'w-m': 'warn', 'w-s': 'bad' }[c]})"></i>${n}</span>`).join('')}<span><i style="background:var(--accent);border-radius:50%"></i>în plan</span></div>
+    ${svgChart({ dates: weeks, label: 'Antrenamente pe săptămâni', yMin: 0, h: 170, xLabel: m => fmtShort(m), series: [{ type: 'stack', parts: Object.entries(DONE).map(([k, [, c]]) => ({ values: wk.map(x => x[k] || null), cls: c })) }, { type: 'dots', values: wk.map(x => x.plan || null), cls: 'last-dot', r: 4 }],
+      tips: i => `Săpt. ${fmtShort(weeks[i])}: ${wk[i].complet} complet, ${wk[i].partial} parțial, ${wk[i].minim} minim, ${wk[i].sarit} sărite · ${wk[i].plan} în plan` })}</section>
+  <section class="card"><h2>Minute pe zone de puls</h2><div class="legend">${ZONES.map(([, n, c]) => `<span><i class="lg-z${c}"></i>${n}</span>`).join('')}</div>
+    ${svgChart({ dates: weeks, label: 'Minute pe zone', yMin: 0, h: 170, series: [{ type: 'stack', parts: ZONES.map(([, , c]) => ({ values: wk.map(x => x[c] || null), cls: 'z-' + c })) }],
+      tips: i => wk[i].u + wk[i].m + wk[i].i ? `Săpt. ${fmtShort(weeks[i])}: ușor ${wk[i].u}′ · moderat ${wk[i].m}′ · intens ${wk[i].i}′` : null })}
+    <p class="muted small">Din antrenamentele prinse de brățară. Ușor &lt;60%, moderat 60–75%, intens &gt;75% din pulsul maxim (184).</p></section>
+  <section class="card"><h2>Cum te-ai simțit</h2>
+    ${svgChart({ dates, label: 'Cum te-ai simțit (1–5)', yMin: 1, yMax: 5, h: 140, series: [{ type: 'dots', values: feel, r: 4.5, clsFn: v => v >= 4 ? 'd-ok' : v >= 3 ? 'd-warn' : 'd-bad' }], ...goto, tips: i => feel[i] != null ? tipDay(i, `${feel[i]}/5${D(dates[i]).log?.feelNote ? ' · ' + D(dates[i]).log.feelNote : ''}`) : null })}</section>
   <section class="card"><h2>Genunchi</h2><div class="legend"><span><i style="background:var(--ok)"></i>0–3</span><span><i style="background:var(--warn)"></i>4–5</span><span><i style="background:var(--bad)"></i>peste 5</span></div>
-    ${svgChart({ dates, label: 'Durere maximă genunchi', yMin: 0, yMax: 10, h: 150, series: [{ type: 'dots', values: pain, r: 4.5, clsFn: v => v <= 3 ? 'd-ok' : v <= 5 ? 'd-warn' : 'd-bad' }] })}
-    <p class="muted small">Cea mai mare valoare notată în ziua antrenamentului: în timpul lui, seara sau a doua zi dimineață.</p></section></div>`;
+    ${svgChart({ dates, label: 'Durere maximă genunchi', yMin: 0, yMax: 10, h: 150, series: [{ type: 'dots', values: pain, r: 4.5, clsFn: v => v <= 3 ? 'd-ok' : v <= 5 ? 'd-warn' : 'd-bad' }], ...goto, tips: i => pain[i] != null ? tipDay(i, `durere maximă ${pain[i]}/10`) : null })}
+    <p class="muted small">Cea mai mare valoare notată în ziua antrenamentului: în timpul lui, seara sau a doua zi dimineață.</p></section>
+  </div>`;
+  // vitamins and minerals
+  const avg7 = nutrAvg(last7), nk = NK[S.nutr] ? S.nutr : 'vitD', nn = NK[nk];
+  const nv = dates.map(d => { const x = dayNutr(S.days[d]); return x?.complete ? x.n[nk] ?? null : null; });
+  const nAvg = rolling(dates, d => { const x = dayNutr(S.days[d]); return x?.complete ? x.n[nk] ?? null : null; }, 7, 3);
+  const lacking = NUTR.map(x => ({ ...x, pct: pctOf(x.key, avg7.n[x.key]) })).filter(x => x.pct != null && x.pct < 80).sort((a, b) => a.pct - b.pct);
+  h += `<h2 class="sec-title">Vitamine și minerale</h2><div class="charts">`;
+  if (!avg7.days) h += `<section class="card wide"><p class="empty">Apar după ce Șerpa estimează și vitaminele și mineralele meselor (zile cu toate mesele estimate).</p></section>`;
+  else h += `<section class="card"><h3>Ce îți lipsește</h3><p class="muted small">Media pe ${avg7.days} ${avg7.days === 1 ? 'zi completă' : 'zile complete'} din ultimele 7.</p>
+      ${lacking.length ? `<ul class="lack">${lacking.map(x => `<li>${stHTML(statusOf(x.pct))} <strong>${esc(x.name)}</strong>: ${fmtN(x.pct, 0)}% din țintă${S.index?.foods?.[x.key] ? `<br><span class="small muted">Găsești în: ${esc(S.index.foods[x.key])}</span>` : ''}</li>`).join('')}</ul>` : '<p>Toate sunt peste 80% din țintă.</p>'}
+      <p class="muted small">${STATUS.bad[0]} Deficit = sub 50% · ${STATUS.warn[0]} Sub țintă = 50–80% · ${STATUS.ok[0]} Bine = peste 80%. Ținta = necesarul pentru un bărbat de 31–50 de ani (sau ce a stabilit Șerpa).</p></section>
+    <section class="card"><div class="row between"><h3>Media pe 7 zile</h3><span class="muted small">atinge unul pentru grafic</span></div>${nutrRows(avg7.n, { colored: true })}</section>`;
+  h += `<section class="card wide" id="nutrChart"><h3>${esc(nn.name)} pe zile</h3><label class="f">Alege<select data-nutr>${NUTR.map(x => `<option value="${x.key}" ${x.key === nk ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
+      ${svgChart({ dates, full: true, label: nn.name, yMin: 0, dec: nn.ref < 20 ? 1 : 0, refs: [[nTarget(nk), `țintă ${fmtN(nTarget(nk), 1)} ${nn.unit}`]], series: [{ type: 'bars', values: nv, cls: 'bar-ice' }, { type: 'line', values: nAvg }], ...goto,
+        tips: i => nv[i] != null ? tipDay(i, `${fmtN(nv[i], nn.ref < 20 ? 1 : 0)} ${nn.unit} · ${fmtN(pctOf(nk, nv[i]), 0)}% din țintă`) : null })}
+      <p class="muted small">Bare = zilele cu toate mesele estimate · linia = media pe 7 zile · VNR de pe etichete: ${fmtN(nn.vnr, 1)} ${nn.unit}.</p></section></div>`;
+  return h;
+}
+
+// the night that ended in the morning of d, in minutes from 00:00 of d
+function sleepSpan(d) {
+  const sg = S.det?.[d]?.somn; if (sg?.length) return [sg[0][0], sg[sg.length - 1][1]];
+  const s = sleepOf(d); if (!s?.culcare || !s?.ridicare) return null;
+  const a = toMin(s.culcare), b = toMin(s.ridicare); return [a > b ? a - 1440 : a, b];
+}
+const ROW = { t: 0, r: 1, u: 2, s: 2, p: 3 }, STAGE = { p: 'Profund', r: 'REM', u: 'Ușor', t: 'Treaz', s: 'Somn' };
+
+function viewPDay() {
+  const t = today(), d = S.pDate || t, day = S.days[d] || {}, z = SZ(d), det = S.det?.[d], prev = S.det?.[addDays(d, -1)];
+  ensureDet(addDays(d, -1), d);
+  const sl = sleepOf(d), kc = dayKcal(day), ktg = d >= (S.profile?.startDate || '') && d <= t ? kcalTarget(d).kcal : null, stp = daySteps(d), done = doneOf(day), p = S.plans[d];
+  const now = d === t ? (() => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); })() : null;
+  let h = `<div class="pnav"><button class="btn sm" data-act="pday" data-n="-1" aria-label="Ziua anterioară">‹</button><h2>${esc(fmtDate(d))}</h2><button class="btn sm" data-act="pday" data-n="1" aria-label="Ziua următoare" ${d >= t ? 'disabled' : ''}>›</button></div>
+  <div class="row between"><input type="date" data-pdate value="${d}" max="${t}" aria-label="Alege ziua" style="width:auto;flex:1;max-width:220px"><button class="btn sm" data-act="goto" data-date="${d}">Deschide în Azi</button></div>
+  <div class="tiles six">
+    <div class="tile"><span class="eyebrow">Greutate</span><span class="v">${day.weight != null ? fmtN(day.weight) + ' kg' : '–'}</span><span class="muted small">${(() => { const a = rolling([d], x => S.days[x]?.weight ?? null)[0]; return a ? `media 7 zile ${fmtN(a)}` : 'necântărit'; })()}</span></div>
+    <div class="tile" style="--tile:var(--warn)"><span class="eyebrow">Calorii</span><span class="v">${fmtN(kc, 0)}</span><span class="muted small">${ktg ? `ținta ${fmtN(ktg, 0)}` : ''}</span></div>
+    <div class="tile" style="--tile:var(--ice)"><span class="eyebrow">Pași</span><span class="v">${stp != null ? stp.toLocaleString('ro-RO') : '–'}</span><span class="muted small">${day.steps != null ? 'scriși de tine' : z?.pasi ? 'de la brățară' : ''}</span></div>
+    <div class="tile" style="--tile:var(--s-deep)"><span class="eyebrow">Somn</span><span class="v">${hcDur(sleepMin(d))}</span><span class="muted small">${sl ? `${esc(sl.culcare)}–${esc(sl.ridicare)}${sl.scor != null ? ' · scor ' + sl.scor : ''}` : day.sleepHours != null ? 'notat de tine' : ''}</span></div>
+    <div class="tile" style="--tile:var(--bad)"><span class="eyebrow">Puls în repaus</span><span class="v">${restHR(d) ?? '–'}</span><span class="muted small">${z?.puls?.maxim ? `maxim ${z.puls.maxim}` : (z?.lipsa || []).includes('puls') ? 'fără puls de la Mi Fitness' : ''}</span></div>
+    <div class="tile" style="--tile:var(--ok)"><span class="eyebrow">Antrenament</span><span class="v" style="font-size:24px">${done ? DONE[done][0] : p?.blocks?.length ? (d < t ? 'Nenotat' : 'În plan') : 'Odihnă'}</span><span class="muted small">${esc(p?.title || '')}</span></div>
+  </div><div class="charts">`;
+
+  // sleep
+  h += `<section class="card wide"><h2>Somn</h2>`;
+  if (det?.somn?.length) {
+    const sg = det.somn, x0 = Math.floor(sg[0][0] / 60) * 60, x1 = Math.ceil(sg[sg.length - 1][1] / 60) * 60;
+    h += timeChart({ x0, x1, h: 150, label: 'Fazele somnului', rowLabels: ['Treaz', 'REM', 'Ușor', 'Profund'], layers: [{ type: 'rows', segs: sg.map(([a, b, s]) => [a, b, ROW[s] ?? 2, 's-' + s]) }],
+      hits: sg.map(([a, b, s]) => [a, b, `${hhmm(a)}–${hhmm(b)} · ${STAGE[s] || s} · ${b - a} min`]) });
+  }
+  if (sl?.profund != null) {
+    const tot = SLEEP_PH.reduce((a, [k]) => a + (sl[k] || 0), 0) || 1;
+    h += `<div class="pbar" role="img" aria-label="Fazele somnului">${SLEEP_PH.map(([k, , c]) => `<span class="lg-${c}" style="width:${(sl[k] || 0) / tot * 100}%"></span>`).join('')}</div>
+      <div class="legend" style="margin-top:6px">${SLEEP_PH.map(([k, n, c]) => `<span><i class="lg-${c}"></i>${n} ${hcDur(sl[k] || 0)} (${fmtN((sl[k] || 0) / tot * 100, 0)}%)</span>`).join('')}</div>`;
+  }
+  if (sl) h += `<dl class="kv2"><dt>Culcare – trezire</dt><dd>${esc(sl.culcare)} – ${esc(sl.ridicare)}${sl.adormit && sl.adormit !== sl.culcare ? ` · adormit ${esc(sl.adormit)}` : ''}</dd><dt>Dormit</dt><dd>${hcDur(sl.min)}${sl.treziri ? ` · ${sl.treziri} treziri` : ''}${sl.scor != null ? ` · scor ${sl.scor}` : ''}${sl.status === 'manual' ? ' · notat manual' : ''}</dd>
+      ${sl.alarma ? `<dt>Alarmă</dt><dd>${esc(sl.alarma)}${sl.alarmeSunat > 1 ? ` · a sunat de ${sl.alarmeSunat} ori` : ''}${sl.snoozeMin != null ? ` · snooze ${sl.snoozeMin}′` : ''}</dd>` : ''}
+      ${z?.somnZi?.min ? `<dt>Somn de zi</dt><dd>${hcDur(z.somnZi.min)}${z.somnZi.culcare ? ` · ${esc(z.somnZi.culcare)}–${esc(z.somnZi.ridicare)}` : ''}</dd>` : ''}</dl>`;
+  else h += `<p class="muted">${day.sleepHours != null ? `Notat de tine: ${fmtN(day.sleepHours)} ore.` : 'Fără somn de la brățară pentru noaptea asta.'}</p>`;
+  if (sl && !det?.somn) h += `<p class="muted small">Graficul fazelor de-a lungul nopții apare pentru zilele importate cu Summit Sync 0.13.</p>`;
+  h += `</section>`;
+
+  // heart rate and SpO2 over the day (the evening before from the previous day's file)
+  h += `<section class="card wide"><h2>Puls${det?.spo2?.length ? ' și SpO2' : ''}</h2>`;
+  const ss = sleepSpan(d);
+  if (det?.puls?.length) {
+    const x0 = Math.min(0, ss ? Math.floor(ss[0] / 60) * 60 : 0), x1 = 1440;
+    const pts = [...(prev?.puls || []).map(([m, a, b, c]) => [m - 1440, a, b, c]).filter(q => q[0] >= x0), ...det.puls];
+    const shades = []; if (ss) shades.push([ss[0], ss[1], 'shade']);
+    (z?.antrenamente || []).forEach(a => { const s0 = toMin(a.start); if (s0 != null) shades.push([s0, s0 + (a.min || 0), 'shade-w']); });
+    h += `<div class="legend"><span><i style="background:var(--bad)"></i>puls mediu la 5 min</span><span><i style="background:var(--bad);opacity:.25"></i>minim–maxim</span><span><i style="background:var(--s-deep);opacity:.3"></i>somn</span><span><i style="background:var(--accent);opacity:.4"></i>antrenament</span></div>`;
+    h += timeChart({ x0, x1, h: 200, now, label: 'Puls pe zi', layers: [{ type: 'shade', spans: shades }, { type: 'band', pts: pts.map(([m, a, , c]) => [m, a, c]) }, { type: 'line', pts: pts.map(([m, , b]) => [m, b]), cls: 'line hr', gap: 20 }],
+      hits: pts.map(([m, a, b, c]) => [m, m + 5, `${hhmm(m)} · ${b} bpm (${a}–${c})`]) });
+  } else if (z?.puls) h += `<dl class="kv2"><dt>Repaus</dt><dd>${z.puls.repaus ?? '–'} bpm</dd><dt>Mediu</dt><dd>${z.puls.mediu ?? '–'} bpm</dd><dt>Maxim</dt><dd>${z.puls.maxim ?? '–'} bpm</dd></dl>`;
+  if ((z?.lipsa || []).includes('puls')) h += `<p class="muted small">Mi Fitness n-a trimis pulsul continuu în ziua asta (brățara a fost purtată: SpO2, somnul și pașii au venit).</p>`;
+  if (det?.spo2?.length) {
+    const x0 = Math.min(0, ss ? Math.floor(ss[0] / 60) * 60 : 0);
+    const o2 = [...(prev?.spo2 || []).map(([m, v]) => [m - 1440, v]).filter(q => q[0] >= x0), ...det.spo2];
+    h += `<h3>SpO2</h3>` + timeChart({ x0, x1: 1440, h: 130, now, yMax: 100, label: 'SpO2', layers: [{ type: 'shade', spans: ss ? [[ss[0], ss[1], 'shade']] : [] }, { type: 'dots', pts: o2, cls: 'dot-o2', r: 3 }],
+      hits: o2.map(([m, v]) => [m - 4, m + 4, `${hhmm(m)} · SpO2 ${v}%`]) });
+  }
+  if (!det?.puls?.length && !det?.spo2?.length) h += `<p class="muted small">${z ? 'Curba pulsului și SpO2 pe ore apar pentru zilele importate cu Summit Sync 0.13.' : 'Fără date de la brățară în ziua asta.'}</p>`;
+  h += `</section>`;
+
+  // steps per half hour
+  h += `<section class="card wide"><h2>Pași</h2>`;
+  if (det?.pasi?.length) {
+    const pts = det.pasi.map((v, i) => [i * 30, i * 30 + 30, v]);
+    h += timeChart({ x0: 0, x1: 1440, h: 160, now, yMin: 0, label: 'Pași pe jumătăți de oră', layers: [{ type: 'bars', pts, cls: 'bar-steps' }], hits: pts.filter(q => q[2]).map(([a, b, v]) => [a, b, `${hhmm(a)}–${hhmm(b)} · ${v.toLocaleString('ro-RO')} pași`]) });
+  }
+  h += `<p>${stp != null ? `<strong>${stp.toLocaleString('ro-RO')}</strong> pași` : 'Fără pași în ziua asta.'}${z?.pasi?.telefon ? ` · din care telefon ${z.pasi.telefon.toLocaleString('ro-RO')}` : ''}${S.profile?.targets?.steps ? ` · ținta ${fmtN(S.profile.targets.steps, 0)}` : ''}</p>`;
+  if (z?.plimbari?.length) h += `<p class="small">Plimbări: ${z.plimbari.map(w => `${esc(w.start)} · ${w.min} min · ${(w.pasi || 0).toLocaleString('ro-RO')} pași${w.pulsMediu ? ` · ${w.pulsMediu} bpm` : ''}`).join('; ')}</p>`;
+  if (!det?.pasi?.length && z) h += `<p class="muted small">Pașii pe ore apar pentru zilele importate cu Summit Sync 0.13.</p>`;
+  h += `</section>`;
+
+  // workout: plan, log and the band
+  h += `<section class="card"><h2>Antrenament</h2>`;
+  if (p) h += `<p><strong>${esc(p.title || p.code || '')}</strong>${p.blocks?.length ? '' : ' <span class="muted small">(fără exerciții)</span>'}</p>`;
+  const lg = day.log || {};
+  if (done || lg.feel != null || maxPain(day) != null) h += `<dl class="kv2">${done ? `<dt>Făcut</dt><dd>${DONE[done][0]}${lg.skipReason ? ' · ' + esc(lg.skipReason) : ''}</dd>` : ''}${lg.feel != null ? `<dt>Cum a fost</dt><dd>${lg.feel}/5${lg.feelNote ? ' · ' + esc(lg.feelNote) : ''}</dd>` : ''}
+    ${maxPain(day) != null ? `<dt>Genunchi</dt><dd>${['painDuring', 'painEvening', 'painMorning'].filter(k => lg[k] != null).map(k => `${{ painDuring: 'în timpul lui', painEvening: 'seara', painMorning: 'a doua zi' }[k]} ${lg[k]}`).join(' · ')}</dd>` : ''}</dl>`;
+  const ch = Object.entries(lg.changes || {});
+  if (ch.length) h += `<ul class="small">${ch.map(([ex, c]) => `<li><strong>${esc(exName(ex))}</strong>: ${esc(changeLine(c))}</li>`).join('')}</ul>`;
+  if (lg.notes) h += `<p class="small">${esc(lg.notes)}</p>`;
+  if (day.classLog?.minutes) h += `<p class="small">Clasă: ${esc(day.classLog.what || '')} · ${day.classLog.minutes} min${day.classLog.rpe ? ` · efort ${day.classLog.rpe}` : ''}</p>`;
+  if (day.outdoor && (day.outdoor.minutes || day.outdoor.km)) h += `<p class="small">Afară: ${[day.outdoor.minutes && day.outdoor.minutes + ' min', day.outdoor.km && fmtN(day.outdoor.km) + ' km'].filter(Boolean).join(' · ')}${day.outdoor.notes ? ' · ' + esc(day.outdoor.notes) : ''}</p>`;
+  (day.cardio || []).forEach(c => { h += `<p class="small">${esc(cardioLine(c))}</p>`; });
+  (z?.antrenamente || []).forEach((a, i) => {
+    const zt = ZONES.reduce((s, [k]) => s + (a.zone?.[k] || 0), 0) || 1, s0 = toMin(a.start), hr = det?.antr?.[i];
+    h += `<div class="wcard"><span class="eyebrow">Brățara · ${esc(a.tip || '')}${a.titlu ? ' · ' + esc(a.titlu) : ''}</span><p class="small">${esc(a.start)} · ${a.min} min${a.km ? ` · ${fmtN(a.km, 2)} km` : ''}${a.pulsMediu ? ` · puls mediu ${a.pulsMediu}, maxim ${a.pulsMaxim}` : ''}</p>
+      ${a.zone ? `<div class="pbar">${ZONES.map(([k, , c]) => `<span class="lg-z${c}" style="width:${(a.zone[k] || 0) / zt * 100}%"></span>`).join('')}</div><div class="legend" style="margin-top:6px">${ZONES.map(([k, n, c]) => `<span><i class="lg-z${c}"></i>${n} ${a.zone[k] || 0}′</span>`).join('')}</div>` : ''}
+      ${hr?.length && s0 != null ? timeChart({ x0: hr[0][0], x1: hr[hr.length - 1][0] + 1, h: 140, label: 'Puls în antrenament', full: false, layers: [{ type: 'line', pts: hr, cls: 'line hr', gap: 3 }], hits: hr.map(([m, v]) => [m, m + 1, `${hhmm(m)} · ${v} bpm`]) }) : ''}</div>`;
+  });
+  if (!p && !done && !z?.antrenamente?.length && !(day.cardio || []).length) h += `<p class="muted">Zi de odihnă.</p>`;
+  h += `</section>`;
+
+  // food
+  const pr = dayProtein(day), fb = dayFiber(day), tg = S.profile?.targets || {};
+  const meals = [...(day.meals || [])].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  h += `<section class="card"><h2>Mâncare</h2><dl class="kv2"><dt>Calorii</dt><dd>${fmtN(kc, 0)}${ktg ? ` din ${fmtN(ktg, 0)} kcal` : ''}</dd><dt>Proteine</dt><dd>${fmtN(pr, 0)} g${tg.protein ? ` (ținta ${tg.protein[0]}–${tg.protein[1]})` : ''}</dd><dt>Fibre</dt><dd>${fmtN(fb, 0)} g</dd></dl>
+    ${meals.length ? `<ul class="small">${meals.map(m => `<li><strong>${esc(MEALT.find(x => x[0] === m.type)?.[1] || m.type || 'Masă')}</strong>${m.time ? ' ' + esc(m.time) : ''}: ${esc((m.items || []).map(i => i.name).filter(Boolean).join(', ') || 'poze')} · ${m.est?.kcal != null ? `${fmtN(m.est.kcal, 0)} kcal, ${fmtN(m.est.protein, 0)} g proteine` : 'neestimată'}</li>`).join('')}</ul>` : '<p class="muted">Nicio masă notată.</p>'}</section>`;
+  const dn = dayNutr(day);
+  h += `<section class="card wide"><h2>Vitamine și minerale</h2>${dn ? `${dn.complete ? '' : '<p class="muted small">Nu toate mesele au încă vitaminele și mineralele estimate; totalul e parțial.</p>'}${nutrRows(dn.n, { colored: dn.complete && d < t })}` : '<p class="muted">Încă neestimate pentru ziua asta.</p>'}</section>`;
+  return h + '</div>';
 }
 
 /* ---------- calendar ---------- */
@@ -2515,6 +2884,22 @@ async function uploadFiles(files) {
 }
 
 /* ---------- events ---------- */
+function showTip(el) {
+  const tip = $('#tip'), r = el.getBoundingClientRect();
+  $$('.hit.on').forEach(x => x.classList.remove('on')); el.classList.add('on');
+  tip.textContent = el.dataset.tip + (el.dataset.date ? '\nAtinge din nou pentru ziua întreagă' : ''); tip.hidden = false;
+  tip.style.left = Math.min(innerWidth - 90, Math.max(90, r.left + r.width / 2)) + 'px'; tip.style.top = Math.max(60, r.top + 24) + 'px';
+}
+function hideTip() { $('#tip').hidden = true; $$('.hit.on').forEach(x => x.classList.remove('on')); }
+document.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const h = e.target.closest?.('.hit'); if (h) showTip(h); else hideTip(); });
+addEventListener('scroll', hideTip, { passive: true });
+// first tap on a chart shows the values, a second tap on the same day opens it in the day view
+document.addEventListener('click', e => {
+  const h = e.target.closest?.('.hit');
+  if (!h) { hideTip(); return; }
+  if (h.dataset.date && h.dataset.tapped === '1') { hideTip(); S.pv = 'zi'; S.pDate = h.dataset.date; render(); window.scrollTo(0, 0); ensureRange(addDays(S.pDate, -7), S.pDate); return; }
+  $$('.hit[data-tapped]').forEach(x => { x.dataset.tapped = ''; }); showTip(h); h.dataset.tapped = '1';
+});
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const a = b.dataset.act;
@@ -2635,6 +3020,9 @@ document.addEventListener('click', async e => {
     const from = S.range ? addDays(today(), -S.range) : (S.profile?.startDate || addDays(today(), -365));
     ensureRange(from, today());
   }
+  else if (a === 'pview') { S.pv = b.dataset.v; if (S.pv === 'zi' && !S.pDate) S.pDate = today(); render(); }
+  else if (a === 'pday') { const d = addDays(S.pDate || today(), +b.dataset.n); if (d > today()) return; S.pDate = d; render(); ensureRange(addDays(d, -7), d); }
+  else if (a === 'nutr') { S.nutr = b.dataset.k; if (S.pv === 'zi') S.pv = 'general'; render(); $('#nutrChart')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
   else if (a === 'cal') { S.calStart = addDays(S.calStart || mondayOf(today()), +b.dataset.n); render(); ensureRange(S.calStart, addDays(S.calStart, 13)); }
   else if (a === 'goto') { S.date = b.dataset.date; S.tab = 'azi'; render(); window.scrollTo(0, 0); }
 });
@@ -2647,6 +3035,8 @@ $('#view').addEventListener('change', async e => {
     await saveDay(S.date, { outdoor: { photos: [...(o.photos || []), ...ids] } }); return;
   }
   if (el.dataset.cal) { await saveDay(el.dataset.cal, { kind: el.value }); return; }
+  if (el.dataset.pdate !== undefined) { if (/^\d{4}-\d\d-\d\d$/.test(el.value) && el.value <= today()) { S.pDate = el.value; render(); ensureRange(addDays(el.value, -7), el.value); } return; }
+  if (el.dataset.nutr !== undefined) { S.nutr = el.value; render(); return; }
   if (el.dataset.prof) {
     const v = el.dataset.prof === 'avoid' ? el.value.split('\n').map(s => s.trim()).filter(Boolean) : el.value.trim();
     await saveTo('config/profile.json', null, { [el.dataset.prof]: v }); toast('Notat. Trimite cu butonul de jos.'); return;
