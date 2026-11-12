@@ -220,7 +220,7 @@ textarea { min-height: 70px; resize: vertical; }
 .hc-d.fin i { opacity: .45; }
 .hc-verdict { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; margin-bottom: 6px; background: var(--surface-2); }
 .hc-verdict b { font-size: 18px; } .hc-verdict.ok b { color: var(--ok); } .hc-verdict.warn b { color: var(--warn); } .hc-verdict.bad b { color: var(--bad); }
-.hc-q { border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; margin: 8px 0; display: grid; gap: 6px; }
+.hc-q.hc-warn { border-left-color: var(--warn); } .hc-q { border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; margin: 8px 0; display: grid; gap: 6px; }
 .hc-days { list-style: none; margin: 8px 0; padding: 0; }
 .hc-row { padding: 8px 0; border-bottom: 1px solid var(--line); display: grid; gap: 2px; }
 .hc-row.fin { opacity: .55; }
@@ -704,7 +704,7 @@ function commitMessage(ops) {
 
 // Photos live on their own branch ("poze") so the coach can rebuild it weekly and drop processed photos for good,
 // without rewriting the history of the journal on main.
-const APP_VERSION = 'v36';
+const APP_VERSION = 'v37';
 const PHOTO_BRANCH = 'poze';
 let LAST_COMMIT = null;
 async function commitTo(branch, build, message) {
@@ -1400,7 +1400,7 @@ function hcDayRow(d, day, changed) {
   const somn = !s ? '' : s.status === 'ok' || s.status === 'manual' ? `${hcDur(s.min)} · ${esc(s.culcare)}–${esc(s.ridicare)}${s.snoozeMin ? ` · snooze ${s.snoozeMin}′${s.alarmeSunat > 1 ? ` (${s.alarmeSunat} alarme)` : ''}` : ''}${s.scor != null ? ` · scor ${s.scor}` : ''}` : s.status === 'procesare' ? 'somn în procesare' : 'somn lipsă';
   const ex = (day.antrenamente || []).map(a => `${esc(a.tip)} ${a.min}′${a.pulsMediu ? ` ♥${a.pulsMediu}` : ''}`).concat((day.plimbari || []).map(w => `plimbare ${w.min}′`));
   return `<li class="hc-row${hcFinal(d) ? ' fin' : ''}"><div class="row between"><b>${esc(fmtShort(d))}</b><span class="hc-pill ${cls}">${esc(lab)} · ${day.purtat ?? 0}%</span></div>
-    <div class="small">${(p.total ?? 0).toLocaleString('ro-RO')} pași${p.telefon ? ` (telefon ${p.telefon.toLocaleString('ro-RO')})` : ''}${day.puls?.repaus ? ` · repaus ${day.puls.repaus}` : ''}${somn ? ' · ' + somn : ''}</div>
+    <div class="small">${(p.total ?? 0).toLocaleString('ro-RO')} pași${p.telefon ? ` (telefon ${p.telefon.toLocaleString('ro-RO')})` : ''}${day.puls?.repaus ? ` · repaus ${day.puls.repaus}` : ''}${(day.lipsa || []).includes('puls') ? ' · fără puls' : ''}${somn ? ' · ' + somn : ''}</div>
     ${ex.length ? `<div class="small muted">${ex.join(' · ')}</div>` : ''}${(day.anomalii || []).length ? `<div class="small hc-anom">⚠ ${day.anomalii.map(a => `${esc(a.tip.replace('_', ' '))} ${esc(a.start)}`).join(', ')}</div>` : ''}
     ${hcFinal(d) ? '<div class="small muted">finală, nu se mai schimbă</div>' : changed ? '' : '<div class="small muted">neschimbată</div>'}</li>`;
 }
@@ -1419,7 +1419,8 @@ function hcCardHTML() {
   const [vl, vc] = HC_V[r.verdict] || [r.verdict, ''];
   h += `<div class="hc-verdict ${vc}"><b>${esc(vl)}</b><span class="small">${r.mod === 'azi' ? 'azi până acum · ' : ''}${r.sincronizatPana ? `brățara sincronizată până la ${esc(r.sincronizatPana.replace('T', ' '))}` : ''}</span></div>`;
   const ver = r.verificari || {};
-  h += `<p class="small muted">${['V0', 'V1', 'V2', 'V3', 'V4'].filter(k => ver[k]).map(k => `${k} ${esc(ver[k])}`).join(' · ')}</p>`;
+  h += `<p class="small muted">${['V0', 'V1', 'V2', 'V3', 'V4', 'V5'].filter(k => ver[k]).map(k => `${k} ${esc(ver[k])}`).join(' · ')}</p>`;
+  for (const a of r.avertismente || []) h += `<div class="hc-q hc-warn"><p>⚠ ${esc(a)}</p></div>`;
   for (const q of r.intrebari || []) {
     h += `<div class="hc-q"><p>${esc(q.text)}</p><div class="row">`;
     for (const b of q.butoane || []) {
